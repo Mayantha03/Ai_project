@@ -78,7 +78,20 @@ class StudySpaceRecommender:
             else:
                 score += 14.0
                 
-            final_score = round(min(100.0, score), 1)
+            # 5. KNN Feature Vector Distance Metric (Euclidean Similarity)
+            # Query vector Q vs Space vector S: [proximity(0-1), quiet(0-1), ac(0-1), charging(0-1), capacity(0-1)]
+            q_vec = [1.0, 1.0 if need_quiet else 0.5, 1.0, 1.0 if require_charging else 0.0, 0.8]
+            s_vec = [
+                1.0 if is_same_faculty else (0.8 if is_general_lib else 0.4),
+                1.0 if (need_quiet and quiet_level in ["SILENT", "MODERATE"]) or (not need_quiet and quiet_level == "GROUP_DISCUSSION") else 0.3,
+                1.0 if space.get("has_ac", True) else 0.0,
+                1.0 if space.get("has_charging_ports", True) else 0.0,
+                min(1.0, capacity / 50.0)
+            ]
+            euclidean_dist = sum((q - s) ** 2 for q, s in zip(q_vec, s_vec)) ** 0.5
+            knn_similarity = round(max(0.0, 100.0 - (euclidean_dist * 22.0)), 1)
+            
+            final_score = round(min(100.0, (score * 0.7) + (knn_similarity * 0.3)), 1)
             
             scored_spaces.append({
                 "room_code": space.get("room_code"),
@@ -90,6 +103,8 @@ class StudySpaceRecommender:
                 "has_ac": space.get("has_ac", True),
                 "has_charging_ports": space.get("has_charging_ports", True),
                 "match_score": final_score,
+                "knn_similarity_score": knn_similarity,
+                "euclidean_distance": round(euclidean_dist, 3),
                 "ai_reasons": reasons
             })
             
