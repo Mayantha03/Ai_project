@@ -14,19 +14,19 @@ function MainApp() {
   const currentView = activeTab === 'auto' ? currentUser.role : activeTab;
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col selection:bg-emerald-500 selection:text-white">
+    <div className="min-h-screen bg-slate-50 text-slate-900 flex flex-col selection:bg-emerald-500 selection:text-white">
       {/* Top Navbar */}
       <Navbar />
 
       {/* Main Viewport */}
       <div className="flex-1 max-w-7xl w-full mx-auto p-4 sm:p-6 lg:p-8 space-y-6">
         {/* Navigation Tabs for Easy Demonstration during University Presentation */}
-        <div className="flex flex-wrap items-center justify-between gap-4 p-2 rounded-2xl glass-panel border-slate-800">
+        <div className="flex flex-wrap items-center justify-between gap-4 p-2 rounded-2xl glass-panel border-slate-200 bg-white/80">
           <div className="flex items-center gap-1.5 overflow-x-auto">
             <button
               onClick={() => setActiveTab('ADMIN')}
               className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition ${
-                currentView === 'ADMIN' ? 'bg-brand-600 text-white shadow-lg shadow-brand-500/25' : 'text-slate-400 hover:text-white hover:bg-slate-900'
+                currentView === 'ADMIN' ? 'bg-brand-600 text-white shadow-md shadow-brand-500/20' : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
               }`}
             >
               <LayoutDashboard className="w-3.5 h-3.5" />
@@ -36,7 +36,7 @@ function MainApp() {
             <button
               onClick={() => setActiveTab('LECTURER')}
               className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition ${
-                currentView === 'LECTURER' ? 'bg-brand-600 text-white shadow-lg shadow-brand-500/25' : 'text-slate-400 hover:text-white hover:bg-slate-900'
+                currentView === 'LECTURER' ? 'bg-brand-600 text-white shadow-md shadow-brand-500/20' : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
               }`}
             >
               <School className="w-3.5 h-3.5" />
@@ -46,7 +46,7 @@ function MainApp() {
             <button
               onClick={() => setActiveTab('STUDENT')}
               className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition ${
-                currentView === 'STUDENT' ? 'bg-brand-600 text-white shadow-lg shadow-brand-500/25' : 'text-slate-400 hover:text-white hover:bg-slate-900'
+                currentView === 'STUDENT' ? 'bg-brand-600 text-white shadow-md shadow-brand-500/20' : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
               }`}
             >
               <GraduationCap className="w-3.5 h-3.5" />
@@ -54,9 +54,9 @@ function MainApp() {
             </button>
           </div>
 
-          <div className="hidden md:flex items-center gap-2 text-xs text-slate-400 pr-2">
+          <div className="hidden md:flex items-center gap-2 text-xs text-slate-500 pr-2">
             <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-            <span>AI Core Active: Random Forest + Genetic Algorithm</span>
+            <span className="font-medium">AI Core Active: Random Forest + Genetic Algorithm</span>
           </div>
         </div>
 
@@ -69,9 +69,9 @@ function MainApp() {
       </div>
 
       {/* Footer */}
-      <footer className="w-full border-t border-slate-800/80 py-6 text-center text-xs text-slate-500 glass-panel mt-12">
-        <p>Essentials of Artificial Intelligence (Intake 42) • Group Project Submission</p>
-        <p className="text-[11px] text-slate-600 mt-1">Smart Campus Resource Optimization & Classroom Allocation Engine</p>
+      <footer className="w-full border-t border-slate-200 py-6 text-center text-xs text-slate-500 glass-panel bg-white/80 mt-12">
+        <p className="font-medium text-slate-700">Essentials of Artificial Intelligence (Intake 42) • Group Project Submission</p>
+        <p className="text-[11px] text-slate-500 mt-1">Smart Campus Resource Optimization & Classroom Allocation Engine</p>
       </footer>
     </div>
   );
