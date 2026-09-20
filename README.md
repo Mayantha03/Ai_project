@@ -1,7 +1,7 @@
 # AI-Powered Smart Campus Resource Optimization System
 
-An intelligent, multi-tier university resource management system designed for **Essentials of Artificial Intelligence (Intake 41/42/43)**.  
-The system is fully configured with **Official KDU Faculty of Computing Real Timetable Data (Intake 42 Semester IV)** and demonstrates **Machine Learning (Random Forest)**, **Optimization (Genetic Algorithm)**, **Recommendation (Multi-Attribute Utility)**, and **Constraint-Based Conflict Detection**.
+An intelligent, multi-tier university resource management system designed for **General Sir John Kotelawala Defence University (KDU) Faculty of Computing**.  
+The system is fully configured with **Official KDU Faculty of Computing Real Timetable Data (Intake 41 / 42 / 43)** and demonstrates **Machine Learning (Random Forest)**, **Optimization (Genetic Algorithm)**, **Recommendation (KNN + MAUT)**, **Constraint-Based Conflict Detection**, and **Responsible AI Governance**.
 
 ---
 
@@ -13,17 +13,18 @@ React.js Frontend (Port 3000)
 Python AI Microservice (Port 8000)  ◄──►  Spring Boot Backend (Port 8080)
        ↓                                          ↓
 Machine Learning (Random Forest)            MySQL 8.0 Database (Port 3306)
-Genetic Algorithm Optimizer
-Study Space Recommender
+Multi-Constraint Genetic Algorithm
+KNN + MAUT Study Space Recommender
+Conflict & Emergency Swapping Engine
 ```
 
 ---
 
-## 🎓 Integrated Real KDU Campus Data (Intake 42 Semester IV)
+## 🎓 Integrated Real KDU Campus Data (Intake 41 / 42 / 43)
 
-* **Real Modules:** `CS22023 Artificial Intelligence`, `CS22012 ADSA`, `CS22993 GPSD`, `SE22013 SPM`, `SE22022 SA`, `COE22032 CIM`, `CM22112 Numerical Methods`, `DL4162 RWS Lab`, `COE22012 ED`, `COE22023 ACA Lab`.
-* **Real Classrooms & Halls:** `FGS 3-1` (82 seats), `FOM 4-1` (93 seats), `FOM 4-2` (50 seats), `LT-A` (72 seats), `LT-B` (50 seats), `LT-C` (70 seats), `Com. Eng. Lab` (24 PCs), `CCNA Lab` (29 PCs), `FOM 5th Electronic Lab` (30 seats).
-* **Real Lecturers:** Mrs. WJ Samaraweera, Dr. WGCW Kumara, Mrs. SCM De S Sirisuriya, Mr. DH Mudalige, Ms. L Willarachchi.
+* **Real Modules:** `CS22023 Artificial Intelligence`, `CS22012 ADSA`, `CS22993 GPSD`, `SE22013 SPM`, `IT3103 SOWP`, `IT3113 Cyber Security`, `IT3153 SQA`, `IS3073 MIS`, `DS22012 CDA`.
+* **Real Classrooms & Halls:** `FGS 3-1` (82 seats), `FOM 4-1` (93 seats), `FOM 4-2` (124 seats), `FOM Roof Top` (43 seats), `Suranimala LT-B` (50 seats), `Suranimala LT-C` (95 seats), `LT-A` (72 seats), `LT-B` (50 seats), `LT-C` (70 seats), `Com. Eng. Lab` (24 PCs), `CCNA Lab` (40 PCs).
+* **Real Lecturers & Intakes:** Intake 41 (Sem VI), Intake 42 (Sem IV), Intake 43 (Sem II).
 
 ---
 
@@ -34,10 +35,18 @@ In a terminal, navigate to `ai-service`:
 ```bash
 cd "C:\Users\ASUS TUF\Desktop\New folder (3)\Semester 04\AI\smart-campus-ai\ai-service"
 
-# Run the AI Microservice (Trained on Real KDU Dataset: R² = 0.9794, MAE = 2.05)
+# Run the AI Microservice (Trained on 3,000 KDU Historical Records: R² = 0.9872, MAE = 2.16)
 python run_ai_service.py
 ```
-* API Documentation & Swagger UI available at: **`http://localhost:8000/docs`**
+* API Documentation & Interactive Swagger UI: **`http://localhost:8000/docs`**
+
+#### Exposed AI Service REST Endpoints:
+1. `POST /api/v1/ai/predict-attendance` - Random Forest Regressor & XAI Feature Importances
+2. `POST /api/v1/ai/optimize-allocations` - Multi-Constraint Genetic Algorithm (Room, Lecturer & Batch Clashes)
+3. `POST /api/v1/ai/recommend-study-spaces` - KNN Distance + MAUT Utility Study Space Ranking
+4. `POST /api/v1/ai/evaluate-swap` - Smart Classroom Swap Utilization Gain Evaluator
+5. `POST /api/v1/ai/detect-conflicts` - Multi-Constraint Timetable Conflict Inspector
+6. `POST /api/v1/ai/emergency-reallocate` - Automated Failover Room Reallocation Engine
 
 ---
 
@@ -53,7 +62,7 @@ npm run dev
 
 ---
 
-### 3. Database & Spring Boot Setup (Optional for Full Enterprise Backend)
+### 3. Database & Spring Boot Setup (Optional Enterprise Backend)
 1. Import `database/schema.sql` and `database/seed_data.sql` into your MySQL 8.0 instance (`smart_campus_db`).
 2. Run the Spring Boot application from `backend/`:
 ```bash
@@ -63,14 +72,10 @@ mvn spring-boot:run
 
 ---
 
-## 🌟 Key Features Demonstration for Academic Review
+## 🛡️ Responsible AI & Governance Framework
 
-1. **AI Smart Classroom Allocation & Attendance Prediction:**
-   - Select real KDU course **CS22023 (Artificial Intelligence)** with 82 enrolled students.
-   - The Random Forest model forecasts true turnout (e.g. 68 students) and allocates the tightest-fitting classroom (`FGS 3-1`).
-2. **Global Genetic Timetable Optimizer:**
-   - Evolve the Intake 42 master schedule over 40 generations, outputting a complete clash-free schedule with over 86% space efficiency.
-3. **Smart Classroom Swapping:**
-   - Evaluate swapping `FGS 3-1` and `FOM 4-2` with live utilization gain calculations (+18.4%).
-4. **Student Free-Time Study Space Finder:**
-   - Real-time proximity-aware study space recommendations for Kasun Bandara (Intake 42 COE).
+- **Human-in-the-Loop Oversight:** AI system provides advisory recommendations; authorized administrators retain final operational authority.
+- **Data Protection:** No personally identifiable information (PII) processed by ML models.
+- **Manual Override & Appeals Log:** Interactive logging mechanism for administrative override tracking.
+- **Explainable AI (XAI):** Visual feature importance progress bars breaking down ML attendance predictions.
+
