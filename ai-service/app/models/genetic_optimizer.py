@@ -21,19 +21,23 @@ class GeneticClassroomOptimizer:
 
     def _calculate_fitness(self, chromosome: List[Dict[str, Any]], classrooms: List[Dict[str, Any]]) -> float:
         """
-        Evaluates chromosome fitness based on hard penalties and soft objective rewards.
+        Evaluates chromosome fitness based on hard penalties (room, lecturer, batch clashes) and soft objective rewards.
         """
         room_map = {r["room_code"]: r for r in classrooms}
         fitness = 0.0
         
-        # Track double-bookings: (room_code, day, time_slot)
-        booked_slots = set()
+        # Track double-bookings across rooms, lecturers, and student batches
+        booked_room_slots = set()
+        booked_lecturer_slots = set()
+        booked_batch_slots = set()
         
         for gene in chromosome:
             course = gene["course"]
             assigned_room_code = gene["assigned_room"]
             day = course["day"]
             slot = course["time_slot"]
+            lecturer = course.get("lecturer_id") or course.get("lecturer_name")
+            batch = course.get("intake") or course.get("degree_program") or course.get("course_code")
             pred_attendance = course.get("predicted_attendance", course["enrolled_students"])
             
             room = room_map.get(assigned_room_code)
@@ -41,13 +45,29 @@ class GeneticClassroomOptimizer:
                 fitness -= 1000
                 continue
                 
-            slot_key = (assigned_room_code, day, slot)
+            room_slot_key = (assigned_room_code, day, slot)
             
-            # --- Hard Constraint 1: No Double Booking in the same slot ---
-            if slot_key in booked_slots:
-                fitness -= 1500  # Severe penalty for scheduling clash
+            # --- Hard Constraint 1A: No Room Double Booking in the same slot ---
+            if room_slot_key in booked_room_slots:
+                fitness -= 1500  # Severe penalty for room clash
             else:
-                booked_slots.add(slot_key)
+                booked_room_slots.add(room_slot_key)
+                
+            # --- Hard Constraint 1B: No Lecturer Double Booking in the same slot ---
+            if lecturer:
+                lec_slot_key = (lecturer, day, slot)
+                if lec_slot_key in booked_lecturer_slots:
+                    fitness -= 1500  # Severe penalty for lecturer clash
+                else:
+                    booked_lecturer_slots.add(lec_slot_key)
+
+            # --- Hard Constraint 1C: No Student Batch/Intake Double Booking in the same slot ---
+            if batch:
+                batch_slot_key = (batch, day, slot)
+                if batch_slot_key in booked_batch_slots:
+                    fitness -= 1500  # Severe penalty for batch clash
+                else:
+                    booked_batch_slots.add(batch_slot_key)
                 
             # --- Hard Constraint 2: Room Capacity >= Predicted Attendance ---
             if room["capacity"] < pred_attendance:
@@ -80,7 +100,7 @@ class GeneticClassroomOptimizer:
             if room.get("faculty") == course.get("faculty"):
                 fitness += 35  # Home faculty building
             else:
-                fitness += 10  # Cross-faculty sharing (acceptable but slightly penalized for distance)
+                fitness += 10  # Cross-faculty sharing
                 
             # --- Soft Objective 3: AC Requirements ---
             if course.get("requires_ac", True) and room.get("has_ac", True):
@@ -174,21 +194,44 @@ class GeneticClassroomOptimizer:
 
         # Generate detailed result payload with reasoning
         results = []
-        booked_slots = set()
-        clashes = 0
+        booked_room_slots = set()
+        booked_lec_slots = set()
+        booked_batch_slots = set()
+        room_clashes = 0
+        lecturer_clashes = 0
+        batch_clashes = 0
         
         for gene in best_individual:
             course = gene["course"]
             room_code = gene["assigned_room"]
             room = room_lookup[room_code]
             pred_att = course.get("predicted_attendance", course["enrolled_students"])
+            lecturer = course.get("lecturer_id") or course.get("lecturer_name")
+            batch = course.get("intake") or course.get("degree_program") or course.get("course_code")
             
-            slot_key = (room_code, course["day"], course["time_slot"])
-            is_clash = slot_key in booked_slots
-            if is_clash:
-                clashes += 1
-            booked_slots.add(slot_key)
+            room_key = (room_code, course["day"], course["time_slot"])
+            is_room_clash = room_key in booked_room_slots
+            if is_room_clash:
+                room_clashes += 1
+            booked_room_slots.add(room_key)
+
+            is_lec_clash = False
+            if lecturer:
+                lec_key = (lecturer, course["day"], course["time_slot"])
+                is_lec_clash = lec_key in booked_lec_slots
+                if is_lec_clash:
+                    lecturer_clashes += 1
+                booked_lec_slots.add(lec_key)
+
+            is_batch_clash = False
+            if batch:
+                batch_key = (batch, course["day"], course["time_slot"])
+                is_batch_clash = batch_key in booked_batch_slots
+                if is_batch_clash:
+                    batch_clashes += 1
+                booked_batch_slots.add(batch_key)
             
+            is_clash = is_room_clash or is_lec_clash or is_batch_clash
             utilization = round((pred_att / room["capacity"]) * 100, 1)
             is_cross = room.get("faculty") != course.get("faculty")
             
@@ -219,9 +262,14 @@ class GeneticClassroomOptimizer:
                 "ai_reasons": reasons
             })
 
+        total_clashes = room_clashes + lecturer_clashes + batch_clashes
+
         return {
             "total_courses": len(courses),
-            "total_clashes": clashes,
+            "total_clashes": total_clashes,
+            "room_clashes": room_clashes,
+            "lecturer_clashes": lecturer_clashes,
+            "batch_clashes": batch_clashes,
             "best_fitness_score": round(best_fitness, 2),
             "fitness_convergence": best_fitness_history[-10:],
             "allocations": results
@@ -232,15 +280,15 @@ if __name__ == "__main__":
     print("Testing Genetic Algorithm Optimizer...")
     
     mock_classrooms = [
-        {"room_code": "FOC-L101", "room_name": "Mega Hall 1", "capacity": 120, "faculty": "Computing", "is_lab": False, "has_ac": True},
-        {"room_code": "FOC-L102", "room_name": "Classroom 2", "capacity": 60, "faculty": "Computing", "is_lab": False, "has_ac": True},
-        {"room_code": "FOC-LAB1", "room_name": "SE Lab 1", "capacity": 45, "faculty": "Computing", "is_lab": True, "has_ac": True},
-        {"room_code": "FOE-E201", "room_name": "Grand Auditorium", "capacity": 160, "faculty": "Engineering", "is_lab": False, "has_ac": True},
+        {"room_code": "FOM 4-1", "room_name": "FOM Lecture Hall 4-1", "capacity": 120, "faculty": "Computing", "is_lab": False, "has_ac": True},
+        {"room_code": "FGS 3-1", "room_name": "FGS Lecture Hall 3-1", "capacity": 82, "faculty": "Computing", "is_lab": False, "has_ac": True},
+        {"room_code": "CCNA Lab", "room_name": "Networking CCNA Lab", "capacity": 40, "faculty": "Computing", "is_lab": True, "has_ac": True},
+        {"room_code": "FOM 4-2", "room_name": "FOM Seminar Room 4-2", "capacity": 124, "faculty": "Computing", "is_lab": False, "has_ac": True},
     ]
     mock_courses = [
-        {"course_code": "CS22023", "course_name": "AI", "faculty": "Computing", "enrolled_students": 115, "predicted_attendance": 92, "day": "Monday", "time_slot": "08:30-10:30", "requires_lab": False},
-        {"course_code": "CS22042", "course_name": "AI Lab", "faculty": "Computing", "enrolled_students": 42, "predicted_attendance": 40, "day": "Monday", "time_slot": "08:30-10:30", "requires_lab": True},
-        {"course_code": "ME21020", "course_name": "Thermo", "faculty": "Engineering", "enrolled_students": 140, "predicted_attendance": 125, "day": "Monday", "time_slot": "08:30-10:30", "requires_lab": False},
+        {"course_code": "CS22023", "course_name": "Artificial Intelligence", "faculty": "Computing", "enrolled_students": 115, "predicted_attendance": 92, "day": "Monday", "time_slot": "08:30-10:30", "requires_lab": False},
+        {"course_code": "CS22042", "course_name": "AI Practical Lab", "faculty": "Computing", "enrolled_students": 42, "predicted_attendance": 40, "day": "Monday", "time_slot": "08:30-10:30", "requires_lab": True},
+        {"course_code": "IT3103", "course_name": "Service Oriented Web Prog", "faculty": "Computing", "enrolled_students": 89, "predicted_attendance": 68, "day": "Monday", "time_slot": "08:30-10:30", "requires_lab": False},
     ]
     ga = GeneticClassroomOptimizer(generations=20)
     res = ga.optimize(mock_courses, mock_classrooms)
