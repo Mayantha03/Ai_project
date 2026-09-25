@@ -12,6 +12,7 @@ class AttendancePredictRequest(BaseModel):
     time_slot: str = Field(..., description="Time slot (e.g., 08:30-10:30)")
     course_type: str = Field(default="Lecture", description="Lecture, Lab, or Tutorial")
     is_exam_near: int = Field(default=0, description="1 if within 2 weeks of exams, 0 otherwise")
+    has_assignment_submission: int = Field(default=0, description="1 if assignment submission/quiz today, 0 otherwise")
     weather: str = Field(default="Sunny", description="Sunny, Cloudy, or Rainy")
 
 class AttendancePredictResponse(BaseModel):
