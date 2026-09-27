@@ -67,6 +67,7 @@ def predict_attendance(request: AttendancePredictRequest):
             slot=request.time_slot,
             course_type=request.course_type,
             is_exam_near=request.is_exam_near,
+            has_assignment_submission=request.has_assignment_submission,
             weather=request.weather
         )
         return result
@@ -155,3 +156,22 @@ def detect_conflicts(timetable_slots: List[Dict[str, Any]]):
         }
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Conflict Detection Error: {str(e)}")
+
+# -------------------------------------------------------------------
+# Endpoint 6: Emergency Classroom Reallocation
+# -------------------------------------------------------------------
+@app.post("/api/v1/ai/emergency-reallocate")
+def emergency_reallocate(payload: Dict[str, Any]):
+    try:
+        damaged_room = payload.get("damaged_room_code", "FGS 3-1")
+        course_info = payload.get("course_info", {})
+        available_rooms = payload.get("available_rooms", [])
+        result = conflict_swap_engine.emergency_reallocate(
+            damaged_room_code=damaged_room,
+            course_info=course_info,
+            available_rooms=available_rooms
+        )
+        return result
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Emergency Reallocation Error: {str(e)}")
+
