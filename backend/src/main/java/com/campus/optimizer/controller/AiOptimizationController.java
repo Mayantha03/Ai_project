@@ -34,4 +34,14 @@ public class AiOptimizationController {
     public ResponseEntity<?> evaluateSwap(@RequestBody Map<String, Object> payload) {
         return ResponseEntity.ok(aiBridgeService.evaluateSwap(payload));
     }
+
+    @PostMapping("/detect-conflicts")
+    public ResponseEntity<?> detectConflicts(@RequestBody Object payload) {
+        return ResponseEntity.ok(aiBridgeService.detectConflicts(payload));
+    }
+
+    @PostMapping("/emergency-reallocate")
+    public ResponseEntity<?> emergencyReallocate(@RequestBody Map<String, Object> payload) {
+        return ResponseEntity.ok(aiBridgeService.emergencyReallocate(payload));
+    }
 }
