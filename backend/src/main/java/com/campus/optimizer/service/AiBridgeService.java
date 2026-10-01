@@ -53,4 +53,24 @@ public class AiBridgeService {
                 .bodyToMono(Map.class)
                 .block();
     }
+
+    public Map<String, Object> detectConflicts(Object requestPayload) {
+        log.info("Evaluating Timetable Conflicts on AI Microservice...");
+        return aiWebClient.post()
+                .uri("/api/v1/ai/detect-conflicts")
+                .bodyValue(requestPayload)
+                .retrieve()
+                .bodyToMono(Map.class)
+                .block();
+    }
+
+    public Map<String, Object> emergencyReallocate(Map<String, Object> requestPayload) {
+        log.info("Executing Emergency Reallocation on AI Microservice...");
+        return aiWebClient.post()
+                .uri("/api/v1/ai/emergency-reallocate")
+                .bodyValue(requestPayload)
+                .retrieve()
+                .bodyToMono(Map.class)
+                .block();
+    }
 }
