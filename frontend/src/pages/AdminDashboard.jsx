@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { apiService } from '../services/apiService';
 import MetricCard from '../components/MetricCard';
 import ExplainabilityCard from '../components/ExplainabilityCard';
@@ -8,7 +8,7 @@ import {
   Building2, Users, CheckCircle, AlertTriangle, 
   Sparkles, Play, Layers, ArrowRight, ShieldCheck, Flame,
   Pencil, Plus, Trash2, X, Save, Edit3, Table, LayoutGrid,
-  Lock, Scale, MessageSquare
+  Lock, Scale, MessageSquare, Calendar, Settings2
 } from 'lucide-react';
 
 export default function AdminDashboard() {
@@ -37,6 +37,37 @@ export default function AdminDashboard() {
   // Global GA state
   const [gaLoading, setGaLoading] = useState(false);
   const [gaResult, setGaResult] = useState(null);
+  const [activeAdminTab, setActiveAdminTab] = useState("overview");
+  const [coursesToOptimize, setCoursesToOptimize] = useState(() => {
+    const saved = localStorage.getItem('smartCampusCourses');
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        return parsed.map(c => ({
+          ...c,
+          lecturer_name: c.lecturer_name || "Mrs. WJ Samaraweera"
+        }));
+      } catch(e) {}
+    }
+    return [
+      { course_code: "IT3103", course_name: "Service Oriented Web Programming (SOWP)", faculty: "Computing", department: "IT", intake: "Intake 41", enrolled_students: 89, credits: 3, requires_lab: false, lecturer_name: "Mr. KKCS Karunatilake" },
+      { course_code: "IT3153", course_name: "Software Quality Assurance (SQA)", faculty: "Computing", department: "IT", intake: "Intake 41", enrolled_students: 124, credits: 3, requires_lab: false, lecturer_name: "Ms. MVT Kawya" },
+      { course_code: "IT3113", course_name: "Cyber Security (CS)", faculty: "Computing", department: "IT", intake: "Intake 41", enrolled_students: 89, credits: 3, requires_lab: false, lecturer_name: "Mr. JADG Sampath" },
+      { course_code: "IS3073", course_name: "Management Information Systems (MIS)", faculty: "Computing", department: "IS", intake: "Intake 41", enrolled_students: 35, credits: 3, requires_lab: false, lecturer_name: "Mr. WMSRB Wijayarathna" },
+      { course_code: "IT3143", course_name: "Independent Study", faculty: "Computing", department: "IT", intake: "Intake 41", enrolled_students: 124, credits: 3, requires_lab: false, lecturer_name: "Dr. N Wedasinghe", is_visiting: true, visiting_availability: ['Friday'], visiting_time_slots: ['08:30-10:30'] },
+      { course_code: "CS22023", course_name: "Artificial Intelligence", faculty: "Computing", department: "Computer Science", intake: "Intake 42", enrolled_students: 82, credits: 2, requires_lab: false, lecturer_name: "Mrs. WJ Samaraweera" },
+      { course_code: "CS22012", course_name: "Advanced Data Structures & Algorithms", faculty: "Computing", department: "Computer Science", intake: "Intake 42", enrolled_students: 82, credits: 2, requires_lab: false, lecturer_name: "Mrs. SCM De S Sirisuriya" },
+      { course_code: "SE22013", course_name: "Software Project Management", faculty: "Computing", department: "Software Engineering", intake: "Intake 42", enrolled_students: 58, credits: 3, requires_lab: false, lecturer_name: "Dr. WGCW Kumara" },
+    ];
+  });
+
+  useEffect(() => {
+    localStorage.setItem('smartCampusCourses', JSON.stringify(coursesToOptimize));
+  }, [coursesToOptimize]);
+  const [newCourseForm, setNewCourseForm] = useState({
+    course_code: '', course_name: '', departments: ['IT'], intake: 'Intake 41', enrolled_students: 50, credits: 3, requires_lab: false, lecturer_name: '', is_visiting: false, visiting_availability: ['Monday'], visiting_time_slots: ['08:30-10:30']
+  });
+  const [editingCourseIndex, setEditingCourseIndex] = useState(null);
 
   // Exclusive KDU Faculty of Computing Classrooms State (Editable)
   const [classrooms, setClassrooms] = useState([
@@ -182,31 +213,15 @@ export default function AdminDashboard() {
 
   const handleRunGlobalGeneticOptimization = async () => {
     setGaLoading(true);
-    // Real KDU Faculty of Computing Multi-Department Semester Course List
-    const mockSemesterCourses = [
-      // IT & IS Department Courses (Intake 41)
-      { course_code: "IT3103", course_name: "Service Oriented Web Programming (SOWP)", faculty: "Computing", enrolled_students: 89, day: "Monday", time_slot: "09:00-11:00", requires_lab: false },
-      { course_code: "IT3153", course_name: "Software Quality Assurance (SQA)", faculty: "Computing", enrolled_students: 124, day: "Monday", time_slot: "11:30-14:30", requires_lab: false },
-      { course_code: "IT3113", course_name: "Cyber Security (CS)", faculty: "Computing", enrolled_students: 89, day: "Tuesday", time_slot: "09:00-11:00", requires_lab: false },
-      { course_code: "IS3073", course_name: "Management Information Systems (MIS)", faculty: "Computing", enrolled_students: 35, day: "Tuesday", time_slot: "11:30-14:30", requires_lab: false },
-      { course_code: "IT3143", course_name: "Independent Study (IS - Dr. N Wedasinghe)", faculty: "Computing", enrolled_students: 124, day: "Wednesday", time_slot: "09:00-11:00", requires_lab: false },
-      { course_code: "IT3182", course_name: "Essentials of Artificial Intelligence (EAI)", faculty: "Computing", enrolled_students: 124, day: "Wednesday", time_slot: "11:30-14:30", requires_lab: false },
-      { course_code: "IT3133", course_name: "Programming Distributed Components (PDC)", faculty: "Computing", enrolled_students: 89, day: "Thursday", time_slot: "09:00-11:00", requires_lab: false },
-      
-      // Computer Engineering / Computer Science / Software Engineering
-      { course_code: "CS22023", course_name: "Artificial Intelligence", faculty: "Computing", enrolled_students: 82, day: "Friday", time_slot: "09:00-10:30", requires_lab: false },
-      { course_code: "CS22012", course_name: "Advanced Data Structures & Algorithms", faculty: "Computing", enrolled_students: 82, day: "Wednesday", time_slot: "12:30-14:30", requires_lab: false },
-      { course_code: "SE22013", course_name: "Software Project Management", faculty: "Computing", enrolled_students: 58, day: "Monday", time_slot: "09:00-10:30", requires_lab: false },
-    ];
-
     try {
       const res = await apiService.optimizeAllocations({
-        courses: mockSemesterCourses,
+        courses: coursesToOptimize,
         classrooms: classrooms,
         generations: 40,
         population_size: 30
       });
       setGaResult(res);
+      localStorage.setItem('smartCampusTimetable', JSON.stringify(res));
       addNotification("Faculty of Computing Master Schedule Complete", `Optimized ${res.total_courses} courses with 0 clashes across all 5 departments.`, "SYSTEM");
     } catch (err) {
       console.error(err);
@@ -216,9 +231,39 @@ export default function AdminDashboard() {
   };
 
   return (
-    <div className="space-y-8">
-      {/* Overview Metrics */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+    <div className="space-y-6">
+      {/* Navigation Tabs */}
+      <div className="flex flex-wrap items-center gap-2 pb-2">
+        <button 
+          onClick={() => setActiveAdminTab("overview")}
+          className={`flex items-center gap-2 px-4 py-2 text-sm font-semibold rounded-xl border transition ${activeAdminTab === "overview" ? "bg-emerald-600 text-white border-emerald-700 shadow-md" : "bg-white text-slate-600 border-slate-200 hover:bg-slate-50"}`}
+        >
+          <Building2 className="w-4 h-4" /> Overview & Map
+        </button>
+        <button 
+          onClick={() => setActiveAdminTab("allocator")}
+          className={`flex items-center gap-2 px-4 py-2 text-sm font-semibold rounded-xl border transition ${activeAdminTab === "allocator" ? "bg-emerald-600 text-white border-emerald-700 shadow-md" : "bg-white text-slate-600 border-slate-200 hover:bg-slate-50"}`}
+        >
+          <Sparkles className="w-4 h-4" /> AI Predictor & Overrides
+        </button>
+        <button 
+          onClick={() => setActiveAdminTab("optimizer")}
+          className={`flex items-center gap-2 px-4 py-2 text-sm font-semibold rounded-xl border transition ${activeAdminTab === "optimizer" ? "bg-emerald-600 text-white border-emerald-700 shadow-md" : "bg-white text-slate-600 border-slate-200 hover:bg-slate-50"}`}
+        >
+          <Calendar className="w-4 h-4" /> Master Timetable
+        </button>
+        <button 
+          onClick={() => setActiveAdminTab("classrooms")}
+          className={`flex items-center gap-2 px-4 py-2 text-sm font-semibold rounded-xl border transition ${activeAdminTab === "classrooms" ? "bg-emerald-600 text-white border-emerald-700 shadow-md" : "bg-white text-slate-600 border-slate-200 hover:bg-slate-50"}`}
+        >
+          <Settings2 className="w-4 h-4" /> Classrooms Data
+        </button>
+      </div>
+
+      {activeAdminTab === "overview" && (
+        <>
+          {/* Overview Metrics */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
         <MetricCard
           title="FOC Computing Classrooms"
           value="13 Facilities"
@@ -239,7 +284,7 @@ export default function AdminDashboard() {
           value="0 Detected"
           delta="100% Verified"
           deltaType="positive"
-          subtitle="IT, IS, CS, SE, CE & DS verified"
+          subtitle="IT, IS, CS, SE, CE & DBA verified"
           icon={ShieldCheck}
         />
         <MetricCard
@@ -252,8 +297,11 @@ export default function AdminDashboard() {
 
       {/* Interactive KDU Faculty of Computing Map */}
       <CampusMap />
+      </>
+      )}
 
       {/* Main Section: Single AI Allocation & Attendance Predictor */}
+      {activeAdminTab === "allocator" && (
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
         {/* Left: Input Form */}
         <div className="lg:col-span-5 bg-white p-6 rounded-3xl space-y-5 border border-slate-200 shadow-sm">
@@ -299,7 +347,7 @@ export default function AdminDashboard() {
                   <option value="BSc (Hons) Computer Science">Computer Science (CS)</option>
                   <option value="BSc (Hons) Software Engineering">Software Eng (SE)</option>
                   <option value="BSc (Hons) Computer Engineering">Computer Eng (CE)</option>
-                  <option value="BSc (Hons) Data Science & Business Analytics">Data Science (DS)</option>
+                  <option value="BSc (Hons) Data Science & Business Analytics">Data Science (DBA)</option>
                 </select>
               </div>
             </div>
@@ -511,8 +559,10 @@ export default function AdminDashboard() {
           )}
         </div>
       </div>
+      )}
 
       {/* Global Genetic Algorithm Semester Optimization Engine */}
+      {activeAdminTab === "optimizer" && (
       <div className="bg-white p-6 rounded-3xl space-y-6 border border-slate-200 shadow-sm">
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 pb-4 border-b border-slate-200">
           <div>
@@ -523,10 +573,188 @@ export default function AdminDashboard() {
               </span>
             </div>
             <p className="text-xs text-slate-500 mt-0.5">
-              Multi-objective chromosome optimization across IT, IS, CS, SE, CE & DS degree programs simultaneously.
+              Multi-objective chromosome optimization across IT, IS, CS, SE, CE & DBA degree programs simultaneously.
             </p>
           </div>
+        </div>
 
+        {/* Course Pool Manager */}
+        <div className="bg-slate-50 p-4 rounded-2xl border border-slate-200">
+          <div className="flex justify-between items-center mb-3">
+            <h4 className="text-sm font-bold text-slate-800 flex items-center gap-2"><Layers className="w-4 h-4 text-purple-600"/> Master Module Pool ({coursesToOptimize.length} Modules)</h4>
+          </div>
+          
+          <div className="overflow-y-auto max-h-[200px] mb-4 pr-2 space-y-2">
+            {coursesToOptimize.map((c, idx) => (
+              <div key={idx} className="flex items-center justify-between bg-white p-2.5 rounded-lg border border-slate-200 text-xs">
+                <div>
+                  <span className="font-bold text-slate-800">{c.course_code}</span> <span className="text-slate-500 line-clamp-1">{c.course_name}</span>
+                  <div className="text-[10px] text-slate-400 mt-0.5">
+                    {c.department} | {c.intake} | {c.credits} Credits | {c.lecturer_name} 
+                    {c.is_visiting && <span className="ml-1 px-1.5 py-0.5 rounded text-[9px] bg-purple-100 text-purple-700">Visiting: {c.visiting_availability?.join(', ')} @ {c.visiting_time_slots?.join(', ')}</span>}
+                  </div>
+                </div>
+                <div className="flex gap-2">
+                  <button 
+                    onClick={() => {
+                      setEditingCourseIndex(idx);
+                      setNewCourseForm({ ...c, departments: c.department ? c.department.split(', ') : ['IT'] });
+                    }} 
+                    className="text-slate-400 hover:text-emerald-600 p-1 transition"
+                  >
+                    <Edit3 className="w-4 h-4" />
+                  </button>
+                  <button onClick={() => setCoursesToOptimize(coursesToOptimize.filter((_, i) => i !== idx))} className="text-slate-400 hover:text-red-600 p-1 transition">
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          <div className="bg-white p-3 rounded-xl border border-slate-200 grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
+            <div>
+              <label className="block text-[10px] text-slate-500 font-bold mb-1">Course Code</label>
+              <input placeholder="e.g. IT101" value={newCourseForm.course_code} onChange={e => setNewCourseForm({...newCourseForm, course_code: e.target.value})} className="w-full border border-slate-300 rounded px-2 py-1" />
+            </div>
+            <div>
+              <label className="block text-[10px] text-slate-500 font-bold mb-1">Module Name</label>
+              <input placeholder="Name" value={newCourseForm.course_name} onChange={e => setNewCourseForm({...newCourseForm, course_name: e.target.value})} className="w-full border border-slate-300 rounded px-2 py-1" />
+            </div>
+            <div>
+              <label className="block text-[10px] text-slate-500 font-bold mb-1">Lecturer</label>
+              <input placeholder="Lecturer Name" value={newCourseForm.lecturer_name} onChange={e => setNewCourseForm({...newCourseForm, lecturer_name: e.target.value})} className="w-full border border-slate-300 rounded px-2 py-1" />
+            </div>
+            <div>
+              <label className="block text-[10px] text-slate-500 font-bold mb-1">Departments</label>
+              <div className="flex flex-wrap gap-1">
+                {['IT', 'IS', 'CS', 'SE', 'CE', 'DBA'].map(dept => {
+                   const isSelected = newCourseForm.departments.includes(dept);
+                   return (
+                     <button
+                       key={dept}
+                       onClick={() => {
+                         let updated = [...newCourseForm.departments];
+                         if (isSelected) updated = updated.filter(d => d !== dept);
+                         else updated.push(dept);
+                         setNewCourseForm({...newCourseForm, departments: updated});
+                       }}
+                       className={`px-1.5 py-0.5 rounded text-[9px] font-bold border transition ${isSelected ? 'bg-purple-100 text-purple-800 border-purple-300' : 'bg-slate-100 text-slate-500 border-slate-200 hover:bg-slate-200'}`}
+                     >
+                       {dept}
+                     </button>
+                   );
+                })}
+              </div>
+            </div>
+            <div>
+              <label className="block text-[10px] text-slate-500 font-bold mb-1">Intake</label>
+              <select value={newCourseForm.intake} onChange={e => setNewCourseForm({...newCourseForm, intake: e.target.value})} className="w-full border border-slate-300 rounded px-2 py-1">
+                <option value="Intake 40">Intake 40</option><option value="Intake 41">Intake 41</option><option value="Intake 42">Intake 42</option><option value="Intake 43">Intake 43</option>
+              </select>
+            </div>
+            <div>
+              <label className="block text-[10px] text-slate-500 font-bold mb-1">Credits</label>
+              <input type="number" placeholder="Credits" value={newCourseForm.credits} onChange={e => setNewCourseForm({...newCourseForm, credits: parseInt(e.target.value) || 2})} className="w-full border border-slate-300 rounded px-2 py-1" />
+            </div>
+            <div>
+              <label className="block text-[10px] text-slate-500 font-bold mb-1">Students</label>
+              <input type="number" placeholder="Count" value={newCourseForm.enrolled_students} onChange={e => setNewCourseForm({...newCourseForm, enrolled_students: parseInt(e.target.value) || 50})} className="w-full border border-slate-300 rounded px-2 py-1" />
+            </div>
+
+            <div className="col-span-2 sm:col-span-4 grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div>
+                <label className="block text-[10px] text-slate-500 font-bold mb-1">Lecturer Type</label>
+                <div className="flex gap-2">
+                  <button 
+                    onClick={() => setNewCourseForm({...newCourseForm, is_visiting: false, visiting_availability: [], visiting_time_slots: []})} 
+                    className={`flex-1 py-1 text-[10px] font-bold rounded border transition ${!newCourseForm.is_visiting ? 'bg-purple-100 text-purple-800 border-purple-300' : 'bg-slate-100 text-slate-500 hover:bg-slate-200'}`}
+                  >Internal</button>
+                  <button 
+                    onClick={() => setNewCourseForm({...newCourseForm, is_visiting: true, visiting_availability: ['Monday'], visiting_time_slots: ['08:30-10:30']})} 
+                    className={`flex-1 py-1 text-[10px] font-bold rounded border transition ${newCourseForm.is_visiting ? 'bg-purple-100 text-purple-800 border-purple-300' : 'bg-slate-100 text-slate-500 hover:bg-slate-200'}`}
+                  >Visiting</button>
+                </div>
+              </div>
+
+              {newCourseForm.is_visiting && (
+                <div className="col-span-1 sm:col-span-2 space-y-3">
+                  <div>
+                    <label className="block text-[10px] text-purple-700 font-bold mb-1">Available Days</label>
+                    <div className="flex flex-wrap gap-1">
+                      {['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'].map(d => {
+                        const isSel = newCourseForm.visiting_availability?.includes(d);
+                        return (
+                          <button 
+                            key={d}
+                            onClick={() => {
+                              let arr = newCourseForm.visiting_availability ? [...newCourseForm.visiting_availability] : [];
+                              if (isSel) arr = arr.filter(x => x !== d);
+                              else arr.push(d);
+                              if (arr.length === 0) arr.push('Monday');
+                              setNewCourseForm({...newCourseForm, visiting_availability: arr});
+                            }}
+                            className={`px-1.5 py-0.5 rounded text-[9px] font-bold border transition ${isSel ? 'bg-purple-600 text-white border-purple-700' : 'bg-white text-slate-600 border-slate-300 hover:bg-slate-50'}`}
+                          >
+                            {d}
+                          </button>
+                        )
+                      })}
+                    </div>
+                  </div>
+                  
+                  <div>
+                    <label className="block text-[10px] text-purple-700 font-bold mb-1">Available Times</label>
+                    <div className="flex flex-wrap gap-1">
+                      {['08:30-10:30', '10:30-12:30', '13:00-15:00', '15:00-17:00'].map(t => {
+                        const isSel = newCourseForm.visiting_time_slots?.includes(t);
+                        return (
+                          <button 
+                            key={t}
+                            onClick={() => {
+                              let arr = newCourseForm.visiting_time_slots ? [...newCourseForm.visiting_time_slots] : [];
+                              if (isSel) arr = arr.filter(x => x !== t);
+                              else arr.push(t);
+                              if (arr.length === 0) arr.push('08:30-10:30');
+                              setNewCourseForm({...newCourseForm, visiting_time_slots: arr});
+                            }}
+                            className={`px-1.5 py-0.5 rounded text-[9px] font-bold border transition ${isSel ? 'bg-purple-600 text-white border-purple-700' : 'bg-white text-slate-600 border-slate-300 hover:bg-slate-50'}`}
+                          >
+                            {t}
+                          </button>
+                        )
+                      })}
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+            
+            <div className="col-span-2 sm:col-span-4 flex items-end">
+              <button 
+                onClick={() => {
+                  if (newCourseForm.course_code && newCourseForm.departments.length > 0) {
+                    if (editingCourseIndex !== null) {
+                      const updated = [...coursesToOptimize];
+                      updated[editingCourseIndex] = { ...newCourseForm, department: newCourseForm.departments.join(', '), faculty: 'Computing' };
+                      setCoursesToOptimize(updated);
+                      setEditingCourseIndex(null);
+                    } else {
+                      setCoursesToOptimize([...coursesToOptimize, { ...newCourseForm, department: newCourseForm.departments.join(', '), faculty: 'Computing' }]);
+                    }
+                    setNewCourseForm({ course_code: '', course_name: '', departments: ['IT'], intake: 'Intake 41', enrolled_students: 50, credits: 3, requires_lab: false, lecturer_name: '', is_visiting: false, visiting_availability: ['Monday'], visiting_time_slots: ['08:30-10:30'] });
+                  }
+                }}
+                className={`w-full h-[26px] ${editingCourseIndex !== null ? 'bg-emerald-600 hover:bg-emerald-500' : 'bg-slate-800 hover:bg-slate-700'} text-white font-bold rounded flex items-center justify-center gap-1 transition`}
+              >
+                {editingCourseIndex !== null ? <Save className="w-3.5 h-3.5" /> : <Plus className="w-3.5 h-3.5" />} 
+                {editingCourseIndex !== null ? 'Save' : 'Add'}
+              </button>
+            </div>
+          </div>
+        </div>
+        
+        <div className="flex justify-end pt-2">
           <button
             onClick={handleRunGlobalGeneticOptimization}
             disabled={gaLoading}
@@ -553,49 +781,91 @@ export default function AdminDashboard() {
               </div>
             </div>
 
-            {/* Allocation Table */}
-            <div className="overflow-x-auto rounded-2xl border border-slate-200">
-              <table className="w-full text-left text-xs">
-                <thead className="bg-slate-100 text-slate-700 uppercase tracking-wider text-[10px] border-b border-slate-200 font-bold">
-                  <tr>
-                    <th className="p-3">Course</th>
-                    <th className="p-3">Schedule</th>
-                    <th className="p-3">Enrolled / Pred</th>
-                    <th className="p-3">Assigned Room</th>
-                    <th className="p-3">Utilization</th>
-                    <th className="p-3">AI Justification</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-200">
-                  {gaResult.allocations.map((a, i) => (
-                    <tr key={i} className="hover:bg-slate-50">
-                      <td className="p-3 font-semibold text-slate-900">
-                        {a.course_code}
-                        <span className="block text-[10px] font-normal text-slate-500">{a.course_name}</span>
-                      </td>
-                      <td className="p-3 text-slate-700">{a.day} • {a.time_slot}</td>
-                      <td className="p-3 text-slate-700">
-                        {a.enrolled_students} <ArrowRight className="inline w-3 h-3 text-slate-400" /> <span className="font-bold text-emerald-700">{a.predicted_attendance}</span>
-                      </td>
-                      <td className="p-3">
-                        <span className="px-2 py-1 rounded-lg bg-emerald-50 border border-emerald-200 font-mono font-bold text-emerald-700">
-                          {a.assigned_room}
-                        </span>
-                      </td>
-                      <td className="p-3 font-bold text-slate-800">{a.utilization_percentage}%</td>
-                      <td className="p-3 text-slate-500 text-[11px] max-w-xs">{a.ai_reasons[0]}</td>
-                    </tr>
+            {/* Grouped Allocation Tables */}
+            <div className="space-y-8">
+              {Object.entries(
+                gaResult.allocations.reduce((acc, curr) => {
+                  const dept = curr.department || 'General';
+                  const intk = curr.intake || 'General Intake';
+                  if (!acc[dept]) acc[dept] = {};
+                  if (!acc[dept][intk]) acc[dept][intk] = [];
+                  acc[dept][intk].push(curr);
+                  return acc;
+                }, {})
+              ).map(([departmentName, intakes]) => (
+                <div key={departmentName} className="space-y-4">
+                  <h4 className="text-sm font-black text-slate-800 uppercase tracking-widest border-b-2 border-emerald-500 inline-block pb-1">
+                    {departmentName}
+                  </h4>
+                  
+                  {Object.entries(intakes).map(([intakeName, courses]) => (
+                    <div key={intakeName} className="overflow-x-auto rounded-2xl border border-slate-200 shadow-sm bg-white">
+                      <div className="bg-slate-800 px-4 py-2 text-white font-bold text-xs flex justify-between items-center">
+                        <span>{intakeName} Timetable</span>
+                        <span className="text-[10px] font-normal text-slate-300">{courses.length} Sessions Scheduled</span>
+                      </div>
+                      <div className="overflow-x-auto">
+                        <table className="w-full text-left border-collapse bg-white">
+                          <thead className="bg-slate-800 text-white text-[10px] uppercase tracking-wider font-bold">
+                            <tr>
+                              <th className="p-3 border border-slate-700 w-24 text-center">Time</th>
+                              {['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'].map(day => (
+                                <th key={day} className="p-3 border border-slate-700 text-center w-1/5">{day}</th>
+                              ))}
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {[...new Set(courses.map(c => c.time_slot))].sort((a,b) => a.localeCompare(b)).map(slot => (
+                              <tr key={slot} className="hover:bg-slate-50 transition">
+                                <td className="p-3 border border-slate-200 font-bold text-slate-700 text-[11px] text-center whitespace-nowrap bg-slate-100">{slot}</td>
+                                {['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'].map(day => {
+                                  const course = courses.find(c => c.day === day && c.time_slot === slot);
+                                  return (
+                                    <td key={day} className="p-1.5 border border-slate-200 align-top h-24">
+                                      {course ? (
+                                        <div className="h-full flex flex-col justify-between bg-emerald-50 rounded-lg p-2 border border-emerald-200 relative group cursor-default hover:border-emerald-400 transition shadow-sm">
+                                          <div>
+                                            <div className="flex justify-between items-start mb-0.5">
+                                              <span className="font-black text-slate-900 text-[11px] leading-tight">{course.course_code}</span>
+                                              <span className="font-bold text-[9px] text-emerald-600">{course.utilization_percentage}% Util</span>
+                                            </div>
+                                            <div className="text-[9px] text-slate-600 font-medium leading-tight line-clamp-2" title={course.course_name}>{course.course_name}</div>
+                                          </div>
+                                          <div className="mt-2 flex items-center justify-between">
+                                            <span className="font-mono font-bold text-[10px] px-1.5 py-0.5 bg-white text-emerald-800 rounded border border-emerald-100">{course.assigned_room}</span>
+                                            <span className="font-bold text-[9px] text-slate-500">{course.predicted_attendance} pred</span>
+                                          </div>
+                                          
+                                          {/* Tooltip for AI Reasoning */}
+                                          <div className="hidden group-hover:block absolute z-10 w-48 p-2 bg-slate-800 text-white text-[9px] rounded-lg shadow-xl -top-2 left-full ml-2">
+                                            {course.ai_reasons.map((r, ri) => <p key={ri} className="mb-1">{r}</p>)}
+                                          </div>
+                                        </div>
+                                      ) : (
+                                        <div className="h-full flex items-center justify-center text-[10px] text-slate-200"></div>
+                                      )}
+                                    </td>
+                                  );
+                                })}
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
                   ))}
-                </tbody>
-              </table>
+                </div>
+              ))}
             </div>
           </div>
         ) : (
           <p className="text-xs text-slate-500 text-center py-4">Click "Run Genetic Timetable Optimizer" to evolve the Faculty of Computing master schedule.</p>
         )}
       </div>
+      )}
 
       {/* KDU Campus Occupancy Real-Time Heatmap & Hall Management */}
+      {activeAdminTab === "classrooms" && (
       <div className="bg-white p-6 rounded-3xl space-y-4 border border-slate-200 shadow-sm">
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 pb-2 border-b border-slate-200">
           <div>
@@ -745,8 +1015,10 @@ export default function AdminDashboard() {
           </div>
         )}
       </div>
+      )}
 
       {/* RESPONSIBLE AI & HUMAN-IN-THE-LOOP GOVERNANCE FRAMEWORK */}
+      {activeAdminTab === "allocator" && (
       <div className="bg-white p-6 rounded-3xl space-y-6 border border-slate-200 shadow-sm">
         <div className="flex items-center gap-3 pb-3 border-b border-slate-200">
           <div className="p-2 rounded-xl bg-purple-50 text-purple-700 border border-purple-200">
@@ -840,6 +1112,7 @@ export default function AdminDashboard() {
           )}
         </div>
       </div>
+      )}
 
       {/* EDIT HALL MODAL */}
       {editingHallIndex !== null && editForm && (

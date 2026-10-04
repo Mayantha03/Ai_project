@@ -59,12 +59,44 @@ export const apiService = {
           const room = payload.classrooms[idx % payload.classrooms.length];
           const pred = c.predicted_attendance || Math.round(c.enrolled_students * 0.8);
           const util = parseFloat(((pred / room.capacity) * 100).toFixed(1));
+          
+          const allDays = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
+          const timeSlots = ['08:30-10:30', '10:30-12:30', '13:00-15:00', '15:00-17:00'];
+          
+          let assignedDay = allDays[idx % allDays.length];
+          let assignedTimeSlot = timeSlots[idx % timeSlots.length];
+          let visitingReason = '';
+          
+          if (c.is_visiting) {
+            let matchesConstraint = false;
+            if (c.visiting_availability && c.visiting_availability.length > 0) {
+              assignedDay = c.visiting_availability[idx % c.visiting_availability.length];
+              matchesConstraint = true;
+            }
+            if (c.visiting_time_slots && c.visiting_time_slots.length > 0) {
+              assignedTimeSlot = c.visiting_time_slots[idx % c.visiting_time_slots.length];
+              matchesConstraint = true;
+            }
+            if (matchesConstraint) {
+               visitingReason = `Scheduled on ${assignedDay} at ${assignedTimeSlot} to match Visiting Lecturer availability.`;
+            }
+          }
+
+          const reasons = [
+            `Tight capacity fit: ${room.capacity} seats for ${pred} students (${util}% utilization).`,
+            c.faculty === room.faculty ? 'Within home faculty building.' : `Cross-Faculty Sharing from ${room.faculty}.`
+          ];
+          if (visitingReason) reasons.push(visitingReason);
+
           return {
             course_code: c.course_code,
             course_name: c.course_name,
             faculty: c.faculty,
-            day: c.day,
-            time_slot: c.time_slot,
+            department: c.department,
+            intake: c.intake,
+            day: assignedDay,
+            time_slot: assignedTimeSlot,
+            lecturer_name: c.lecturer_name || "Unassigned Lecturer",
             enrolled_students: c.enrolled_students,
             predicted_attendance: pred,
             assigned_room: room.room_code,
@@ -73,10 +105,7 @@ export const apiService = {
             utilization_percentage: util,
             is_cross_faculty: c.faculty !== room.faculty,
             has_clash: false,
-            ai_reasons: [
-              `Tight capacity fit: ${room.capacity} seats for ${pred} students (${util}% utilization).`,
-              c.faculty === room.faculty ? 'Within home faculty building.' : `Cross-Faculty Sharing from ${room.faculty}.`
-            ]
+            ai_reasons: reasons
           };
         })
       };

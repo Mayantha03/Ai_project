@@ -8,6 +8,10 @@ import random
 import copy
 from typing import List, Dict, Any
 
+DAYS = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"]
+SLOTS_2_CREDIT = ["08:30-10:30", "10:30-12:30", "13:00-15:00", "15:00-17:00"]
+SLOTS_3_CREDIT = ["08:30-11:30", "13:00-16:00"]
+
 class GeneticClassroomOptimizer:
     def __init__(self, 
                  population_size: int = 40, 
@@ -34,8 +38,8 @@ class GeneticClassroomOptimizer:
         for gene in chromosome:
             course = gene["course"]
             assigned_room_code = gene["assigned_room"]
-            day = course["day"]
-            slot = course["time_slot"]
+            day = gene.get("assigned_day", course.get("day", "Monday"))
+            slot = gene.get("assigned_time_slot", course.get("time_slot", "08:30-10:30"))
             lecturer = course.get("lecturer_id") or course.get("lecturer_name")
             batch = course.get("intake") or course.get("degree_program") or course.get("course_code")
             pred_attendance = course.get("predicted_attendance", course["enrolled_students"])
@@ -118,9 +122,16 @@ class GeneticClassroomOptimizer:
                 matching_rooms = classrooms
                 
             chosen_room = random.choice(matching_rooms)["room_code"]
+            credits = course.get("credits", 2)
+            slots = SLOTS_3_CREDIT if credits >= 3 else SLOTS_2_CREDIT
+            chosen_day = random.choice(DAYS)
+            chosen_slot = random.choice(slots)
+            
             individual.append({
                 "course": course,
-                "assigned_room": chosen_room
+                "assigned_room": chosen_room,
+                "assigned_day": chosen_day,
+                "assigned_time_slot": chosen_slot
             })
         return individual
 
@@ -143,6 +154,12 @@ class GeneticClassroomOptimizer:
                 if not matching:
                     matching = classrooms
                 gene["assigned_room"] = random.choice(matching)["room_code"]
+            
+            if random.random() < self.mutation_rate:
+                gene["assigned_day"] = random.choice(DAYS)
+                credits = gene["course"].get("credits", 2)
+                slots = SLOTS_3_CREDIT if credits >= 3 else SLOTS_2_CREDIT
+                gene["assigned_time_slot"] = random.choice(slots)
 
     def _tournament_selection(self, population: List[List[Dict[str, Any]]], fitnesses: List[float]) -> List[Dict[str, Any]]:
         selected_indices = random.sample(range(len(population)), self.tournament_size)
@@ -205,11 +222,14 @@ class GeneticClassroomOptimizer:
             course = gene["course"]
             room_code = gene["assigned_room"]
             room = room_lookup[room_code]
+            day = gene.get("assigned_day", course.get("day", "Monday"))
+            slot = gene.get("assigned_time_slot", course.get("time_slot", "08:30-10:30"))
+            
             pred_att = course.get("predicted_attendance", course["enrolled_students"])
             lecturer = course.get("lecturer_id") or course.get("lecturer_name")
             batch = course.get("intake") or course.get("degree_program") or course.get("course_code")
             
-            room_key = (room_code, course["day"], course["time_slot"])
+            room_key = (room_code, day, slot)
             is_room_clash = room_key in booked_room_slots
             if is_room_clash:
                 room_clashes += 1
@@ -217,7 +237,7 @@ class GeneticClassroomOptimizer:
 
             is_lec_clash = False
             if lecturer:
-                lec_key = (lecturer, course["day"], course["time_slot"])
+                lec_key = (lecturer, day, slot)
                 is_lec_clash = lec_key in booked_lec_slots
                 if is_lec_clash:
                     lecturer_clashes += 1
@@ -225,7 +245,7 @@ class GeneticClassroomOptimizer:
 
             is_batch_clash = False
             if batch:
-                batch_key = (batch, course["day"], course["time_slot"])
+                batch_key = (batch, day, slot)
                 is_batch_clash = batch_key in booked_batch_slots
                 if is_batch_clash:
                     batch_clashes += 1
@@ -249,8 +269,10 @@ class GeneticClassroomOptimizer:
                 "course_code": course.get("course_code", "N/A"),
                 "course_name": course.get("course_name", "N/A"),
                 "faculty": course.get("faculty", "N/A"),
-                "day": course.get("day"),
-                "time_slot": course.get("time_slot"),
+                "department": course.get("department", "General"),
+                "intake": course.get("intake", "General Intake"),
+                "day": day,
+                "time_slot": slot,
                 "enrolled_students": course.get("enrolled_students"),
                 "predicted_attendance": pred_att,
                 "assigned_room": room_code,

@@ -28,10 +28,14 @@ class CourseItem(BaseModel):
     course_code: str
     course_name: str
     faculty: str
+    department: Optional[str] = None
+    intake: Optional[str] = None
     enrolled_students: int
     predicted_attendance: Optional[int] = None
-    day: str
-    time_slot: str
+    credits: int = 2
+    lecturer_name: Optional[str] = None
+    day: Optional[str] = None
+    time_slot: Optional[str] = None
     requires_lab: bool = False
     requires_ac: bool = True
 
@@ -53,6 +57,8 @@ class AllocationResult(BaseModel):
     course_code: str
     course_name: str
     faculty: str
+    department: Optional[str] = None
+    intake: Optional[str] = None
     day: str
     time_slot: str
     enrolled_students: int

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { apiService } from '../services/apiService';
 import { useNotifications } from '../context/NotificationContext';
 import { 
@@ -8,6 +8,64 @@ import {
 
 export default function LecturerPortal() {
   const { addNotification } = useNotifications();
+
+  // Dynamic Timetable State
+  const [timetable, setTimetable] = useState(null);
+  const [lecturers, setLecturers] = useState([]);
+  const [selectedLecturer, setSelectedLecturer] = useState("Mrs. WJ Samaraweera");
+  const [lecturerSchedule, setLecturerSchedule] = useState([]);
+  const [activeTab, setActiveTab] = useState("timetable");
+
+  useEffect(() => {
+    const saved = localStorage.getItem('smartCampusTimetable');
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        setTimetable(parsed);
+        
+        let allocs = parsed.allocations;
+        const savedCourses = localStorage.getItem('smartCampusCourses');
+        if (savedCourses) {
+          try {
+            const parsedCourses = JSON.parse(savedCourses);
+            allocs = allocs.map(a => {
+              if (!a.lecturer_name || a.lecturer_name === "Unassigned Lecturer") {
+                const matchedCourse = parsedCourses.find(pc => pc.course_code === a.course_code);
+                return { ...a, lecturer_name: (matchedCourse && matchedCourse.lecturer_name) ? matchedCourse.lecturer_name : "Unassigned Lecturer" };
+              }
+              return a;
+            });
+            parsed.allocations = allocs;
+          } catch(e) {}
+        }
+        
+        const allLecturers = parsed.allocations.flatMap(a => {
+          if (!a.lecturer_name) return [];
+          return a.lecturer_name.split('/').map(name => name.trim()).filter(Boolean);
+        });
+        const uniqueLecturers = [...new Set(allLecturers)];
+        setLecturers(uniqueLecturers);
+        
+        if (uniqueLecturers.length > 0 && !uniqueLecturers.includes(selectedLecturer)) {
+          setSelectedLecturer(uniqueLecturers[0]);
+        }
+      } catch (e) {
+        console.error("Error parsing timetable", e);
+      }
+    }
+  }, []);
+
+  useEffect(() => {
+    if (timetable && selectedLecturer) {
+      const schedule = timetable.allocations.filter(a => 
+        a.lecturer_name && a.lecturer_name.includes(selectedLecturer)
+      );
+      // Sort schedule by day
+      const daysOrder = { "Monday": 1, "Tuesday": 2, "Wednesday": 3, "Thursday": 4, "Friday": 5 };
+      schedule.sort((a, b) => daysOrder[a.day] - daysOrder[b.day]);
+      setLecturerSchedule(schedule);
+    }
+  }, [timetable, selectedLecturer]);
 
   // Real KDU Classroom Swap State
   const [roomA, setRoomA] = useState("FGS 3-1");
@@ -106,40 +164,90 @@ export default function LecturerPortal() {
   };
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-6">
+      {/* Navigation Tabs */}
+      <div className="flex flex-wrap items-center gap-2 pb-2">
+        <button 
+          onClick={() => setActiveTab("timetable")}
+          className={`flex items-center gap-2 px-4 py-2 text-sm font-semibold rounded-xl border transition ${activeTab === "timetable" ? "bg-emerald-600 text-white border-emerald-700 shadow-md" : "bg-white text-slate-600 border-slate-200 hover:bg-slate-50"}`}
+        >
+          <Calendar className="w-4 h-4" /> Timetable
+        </button>
+        <button 
+          onClick={() => setActiveTab("swapping")}
+          className={`flex items-center gap-2 px-4 py-2 text-sm font-semibold rounded-xl border transition ${activeTab === "swapping" ? "bg-emerald-600 text-white border-emerald-700 shadow-md" : "bg-white text-slate-600 border-slate-200 hover:bg-slate-50"}`}
+        >
+          <ArrowRightLeft className="w-4 h-4" /> Swapping Optimizer
+        </button>
+        <button 
+          onClick={() => setActiveTab("booking")}
+          className={`flex items-center gap-2 px-4 py-2 text-sm font-semibold rounded-xl border transition ${activeTab === "booking" ? "bg-emerald-600 text-white border-emerald-700 shadow-md" : "bg-white text-slate-600 border-slate-200 hover:bg-slate-50"}`}
+        >
+          <PlusCircle className="w-4 h-4" /> Booking System
+        </button>
+        <button 
+          onClick={() => setActiveTab("emergency")}
+          className={`flex items-center gap-2 px-4 py-2 text-sm font-semibold rounded-xl border transition ${activeTab === "emergency" ? "bg-red-600 text-white border-red-700 shadow-md" : "bg-white text-slate-600 border-slate-200 hover:bg-slate-50 hover:text-red-600"}`}
+        >
+          <ShieldAlert className="w-4 h-4" /> Emergency
+        </button>
+      </div>
+
       {/* Lecturer Greeting & Current Schedule */}
+      {activeTab === "timetable" && (
       <div className="bg-white p-6 rounded-3xl space-y-4 border border-slate-200 shadow-sm">
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div>
             <h2 className="text-xl font-bold text-slate-900">Lecturer Timetable & Portal</h2>
-            <p className="text-xs text-slate-500">Mrs. WJ Samaraweera • Department of Computer Engineering</p>
+            <div className="flex items-center gap-2 mt-2">
+              <span className="text-xs text-slate-500 font-semibold">Viewing as:</span>
+              <select 
+                value={selectedLecturer} 
+                onChange={(e) => setSelectedLecturer(e.target.value)}
+                className="bg-slate-50 border border-slate-300 rounded-lg px-3 py-1.5 text-xs font-bold text-emerald-700 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+              >
+                {lecturers.length > 0 ? (
+                  lecturers.map(name => (
+                    <option key={name} value={name}>{name}</option>
+                  ))
+                ) : (
+                  <option value="Mrs. WJ Samaraweera">Mrs. WJ Samaraweera (Demo)</option>
+                )}
+              </select>
+            </div>
           </div>
           <span className="px-3 py-1 text-xs font-semibold rounded-full bg-emerald-50 border border-emerald-200 text-emerald-700">
-            Intake 42 Sem IV Active
+            Intake 42 / 41 / 43 Active
           </span>
         </div>
 
-        {/* Real KDU Lecturer Schedule Cards */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-2">
-          <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 space-y-1.5">
-            <span className="text-[10px] font-bold text-emerald-700 uppercase">Friday • 09:00 - 10:30</span>
-            <h4 className="text-sm font-bold text-slate-900">CS22023 - Artificial Intelligence</h4>
-            <p className="text-xs text-slate-600">Allocated Room: <strong className="text-slate-900 font-mono">FGS 3-1</strong> (82 Seats)</p>
-          </div>
-          <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 space-y-1.5">
-            <span className="text-[10px] font-bold text-emerald-700 uppercase">Tuesday • 09:00 - 10:30</span>
-            <h4 className="text-sm font-bold text-slate-900">COE22023 - Advanced Comp Arch</h4>
-            <p className="text-xs text-slate-600">Allocated Lab: <strong className="text-slate-900 font-mono">Com. Eng. Lab</strong> (24 PCs)</p>
-          </div>
-          <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 space-y-1.5">
-            <span className="text-[10px] font-bold text-emerald-700 uppercase">Tuesday • 13:00 - 14:30</span>
-            <h4 className="text-sm font-bold text-slate-900">COE22012 - Engineering Drawing</h4>
-            <p className="text-xs text-slate-600">Allocated Room: <strong className="text-slate-900 font-mono">FOE 2-4</strong> (30 Seats)</p>
-          </div>
+        {/* Dynamic KDU Lecturer Schedule Cards */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-4 pt-2">
+          {lecturerSchedule.length > 0 ? (
+            lecturerSchedule.map((course, idx) => (
+              <div key={idx} className="p-4 rounded-2xl bg-slate-50 border border-slate-200 space-y-1.5 hover:shadow-md transition cursor-pointer">
+                <span className="text-[10px] font-bold text-emerald-700 uppercase">{course.day} • {course.time_slot}</span>
+                <h4 className="text-sm font-bold text-slate-900 line-clamp-1">{course.course_code} - {course.course_name}</h4>
+                <p className="text-xs text-slate-600">Allocated Room: <strong className="text-slate-900 font-mono">{course.assigned_room}</strong> ({course.room_capacity} Seats)</p>
+                <div className="pt-2 flex items-center justify-between border-t border-slate-200 mt-2">
+                  <span className="text-[10px] text-slate-500 font-medium">Est. {course.enrolled_students} Students</span>
+                  {course.room_name && course.room_name.toLowerCase().includes('lab') && <span className="px-1.5 py-0.5 bg-blue-50 text-blue-700 rounded border border-blue-200 font-semibold text-[10px]">Lab</span>}
+                </div>
+              </div>
+            ))
+          ) : (
+            <div className="col-span-full py-8 text-center bg-slate-50 border border-slate-200 border-dashed rounded-2xl">
+              <Calendar className="w-8 h-8 text-slate-400 mx-auto mb-2" />
+              <p className="text-sm font-bold text-slate-700">No Timetable Found</p>
+              <p className="text-xs text-slate-500 mt-1">Please ask the Admin to run the "Genetic Timetable Optimizer" first, or select a valid lecturer.</p>
+            </div>
+          )}
         </div>
       </div>
+      )}
 
       {/* Feature 7 & 11: Smart Classroom Swapping Engine */}
+      {activeTab === "swapping" && (
       <div className="bg-white p-6 rounded-3xl space-y-6 border border-slate-200 shadow-sm">
         <div className="flex items-center gap-2 pb-3 border-b border-slate-200">
           <ArrowRightLeft className="w-5 h-5 text-emerald-600" />
@@ -254,11 +362,11 @@ export default function LecturerPortal() {
           </div>
         )}
       </div>
+      )}
 
-      {/* Row 2: Booking System & Emergency Reallocation */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-        {/* Feature 9: Classroom Booking with Conflict Checker */}
-        <div className="bg-white p-6 rounded-3xl space-y-4 border border-slate-200 shadow-sm">
+      {/* Feature 9: Classroom Booking with Conflict Checker */}
+      {activeTab === "booking" && (
+      <div className="bg-white p-6 rounded-3xl space-y-4 border border-slate-200 shadow-sm">
           <div className="flex items-center gap-2 pb-2 border-b border-slate-200">
             <PlusCircle className="w-5 h-5 text-emerald-600" />
             <div>
@@ -348,8 +456,10 @@ export default function LecturerPortal() {
             )}
           </div>
         </div>
+      )}
 
-        {/* Feature 19: Emergency Classroom Reallocation */}
+      {/* Feature 19: Emergency Classroom Reallocation */}
+      {activeTab === "emergency" && (
         <div className="bg-white p-6 rounded-3xl space-y-4 border border-slate-200 shadow-sm">
           <div className="flex items-center gap-2 pb-2 border-b border-slate-200">
             <AlertOctagon className="w-5 h-5 text-rose-600" />
@@ -391,7 +501,7 @@ export default function LecturerPortal() {
             )}
           </div>
         </div>
-      </div>
+      )}
     </div>
   );
 }

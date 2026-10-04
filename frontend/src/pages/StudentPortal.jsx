@@ -4,10 +4,11 @@ import ExplainabilityCard from '../components/ExplainabilityCard';
 import CampusMap from '../components/CampusMap';
 import { 
   BookOpen, Search, MapPin, Zap, CheckCircle2, 
-  Sparkles, Coffee, Clock, Compass 
+  Sparkles, Coffee, Clock, Compass, Calendar, Map
 } from 'lucide-react';
 
 export default function StudentPortal() {
+  const [activeTab, setActiveTab] = useState("timetable");
   // Empty Room Finder State
   const [filterFaculty, setFilterFaculty] = useState('All');
   const [filterType, setFilterType] = useState('All');
@@ -55,7 +56,42 @@ export default function StudentPortal() {
 
   return (
     <div className="space-y-8">
+      {/* Top Navigation Tabs */}
+      <div className="flex flex-wrap gap-2 mb-2">
+        <button 
+          onClick={() => setActiveTab("timetable")}
+          className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold transition-all ${
+            activeTab === "timetable" 
+              ? "bg-emerald-600 text-white shadow-md shadow-emerald-500/20" 
+              : "bg-white text-slate-600 border border-slate-200 hover:bg-slate-50 hover:text-slate-900"
+          }`}
+        >
+          <Calendar className="w-4 h-4" /> My Timetable
+        </button>
+        <button 
+          onClick={() => setActiveTab("study")}
+          className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold transition-all ${
+            activeTab === "study" 
+              ? "bg-emerald-600 text-white shadow-md shadow-emerald-500/20" 
+              : "bg-white text-slate-600 border border-slate-200 hover:bg-slate-50 hover:text-slate-900"
+          }`}
+        >
+          <Compass className="w-4 h-4" /> Study Recommender
+        </button>
+        <button 
+          onClick={() => setActiveTab("map")}
+          className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold transition-all ${
+            activeTab === "map" 
+              ? "bg-emerald-600 text-white shadow-md shadow-emerald-500/20" 
+              : "bg-white text-slate-600 border border-slate-200 hover:bg-slate-50 hover:text-slate-900"
+          }`}
+        >
+          <Map className="w-4 h-4" /> Map & Classrooms
+        </button>
+      </div>
+
       {/* Student Greeting & Timetable */}
+      {activeTab === "timetable" && (
       <div className="bg-white p-6 rounded-3xl space-y-4 border border-slate-200 shadow-sm">
         <div className="flex items-center justify-between">
           <div>
@@ -91,8 +127,10 @@ export default function StudentPortal() {
           </div>
         </div>
       </div>
+      )}
 
       {/* Feature 4 & 13: Smart Study Space Recommender */}
+      {activeTab === "study" && (
       <div className="bg-white p-6 rounded-3xl space-y-6 border border-slate-200 shadow-sm">
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 pb-3 border-b border-slate-200">
           <div className="flex items-center gap-2">
@@ -192,9 +230,12 @@ export default function StudentPortal() {
           <p className="text-xs text-slate-500 text-center py-4">Click "Find Best Spaces For Me" to compute personalized AI recommendations.</p>
         )}
       </div>
+      )}
 
-      {/* Interactive KDU Campus Space Map */}
-      <CampusMap />
+      {/* Interactive KDU Campus Space Map & AI Finders */}
+      {activeTab === "map" && (
+      <div className="space-y-8">
+        <CampusMap />
 
       {/* Feature 3 & 14: AI Empty Classroom Finder */}
       <div className="bg-white p-6 rounded-3xl space-y-5 border border-slate-200 shadow-sm">
@@ -267,6 +308,8 @@ export default function StudentPortal() {
           </table>
         </div>
       </div>
+      </div>
+      )}
     </div>
   );
 }
