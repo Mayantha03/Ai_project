@@ -26,7 +26,8 @@ authors = [
     ("sethumi-g", "sethugunathunga@gmail.com")
 ]
 
-script_content = "git filter-branch -f --env-filter '\n"
+script_content = "export FILTER_BRANCH_SQUELCH_WARNING=1\n"
+script_content += "git filter-branch -f --env-filter '\n"
 for i, commit in enumerate(commits):
     name, email = authors[i % 4]
     if i == 0:

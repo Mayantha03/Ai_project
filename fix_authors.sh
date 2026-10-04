@@ -1,3 +1,4 @@
+export FILTER_BRANCH_SQUELCH_WARNING=1
 git filter-branch -f --env-filter '
 if [ "$GIT_COMMIT" = "30726f9e6965abffc49d8b27dc2ab94d19e28b68" ]; then
     export GIT_AUTHOR_NAME="Mayantha03"
