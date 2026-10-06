@@ -35,7 +35,7 @@ function MainApp() {
 
       {/* Footer */}
       <footer className="w-full border-t border-slate-200 py-6 text-center text-xs text-slate-500 glass-panel bg-white/80 mt-12">
-        <p className="font-medium text-slate-700">Essentials of Artificial Intelligence (Intake 42) • Group Project Submission</p>
+        <p className="font-medium text-slate-700">ClassOptima</p>
         <p className="text-[11px] text-slate-500 mt-1">Smart Campus Resource Optimization & Classroom Allocation Engine</p>
       </footer>
     </div>
