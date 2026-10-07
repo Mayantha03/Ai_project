@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { apiService } from '../services/apiService';
 import ExplainabilityCard from '../components/ExplainabilityCard';
 import CampusMap from '../components/CampusMap';
@@ -9,6 +9,8 @@ import {
 
 export default function StudentPortal() {
   const [activeTab, setActiveTab] = useState("timetable");
+  const [selectedDay, setSelectedDay] = useState("Friday");
+  
   // Empty Room Finder State
   const [filterFaculty, setFilterFaculty] = useState('All');
   const [filterType, setFilterType] = useState('All');
@@ -29,6 +31,103 @@ export default function StudentPortal() {
     { room_code: "LT-C", room_name: "Lecture Theatre C", faculty: "Computing", building: "Lecture Theatre Complex", quiet_level: "SILENT", capacity: 70, has_ac: true, has_charging_ports: true, has_wifi: true },
     { room_code: "FOE 2-4", room_name: "Engineering Drawing Room 2-4", faculty: "Engineering", building: "FOE Main Building", quiet_level: "MODERATE", capacity: 30, has_ac: false, has_charging_ports: true, has_wifi: true },
   ];
+
+  const mockWeeklyTimetable = {
+    Monday: [
+      { time: "09:00 - 11:00", title: "CS22032 - Database Systems", location: "FOM 4-1 (Dr. Nuwan)", type: "lecture" },
+      { time: "11:00 - 13:00", title: "CS22042 - System Analysis", location: "FOM 4-2 (Mr. Silva)", type: "lecture" },
+      { time: "13:00 - 14:30", title: "Free Period", location: "AI Study Recommender active below", type: "free" },
+      { time: "14:30 - 16:30", title: "CS22023 - Artificial Intelligence", location: "FGS 3-1 (Mrs. WJ Samaraweera)", type: "lecture" }
+    ],
+    Tuesday: [
+      { time: "08:30 - 10:30", title: "Free Period", location: "AI Study Recommender active below", type: "free" },
+      { time: "10:30 - 12:30", title: "CS22053 - Computer Networks", location: "LT-B (Dr. Perera)", type: "lecture" },
+      { time: "13:30 - 15:30", title: "CS22032 - DB Practical", location: "Computing Lab 2", type: "practical" }
+    ],
+    Wednesday: [
+      { time: "08:30 - 11:30", title: "CS22023 - AI Practical", location: "Computing Lab 1", type: "practical" },
+      { time: "12:30 - 14:30", title: "CS22053 - Networks Practical", location: "Network Lab", type: "practical" },
+      { time: "14:30 - 16:30", title: "Free Period", location: "AI Study Recommender active below", type: "free" }
+    ],
+    Thursday: [
+      { time: "09:00 - 11:00", title: "CS22063 - Software Engineering", location: "LT-C (Prof. Karunaratne)", type: "lecture" },
+      { time: "11:00 - 13:00", title: "Free Period", location: "AI Study Recommender active below", type: "free" },
+      { time: "14:00 - 16:00", title: "CS22063 - SE Practical", location: "Computing Lab 3", type: "practical" }
+    ],
+    Friday: [
+      { time: "09:00 - 10:30", title: "CS22023 - Artificial Intelligence", location: "FGS 3-1 (Mrs. WJ Samaraweera)", type: "lecture" },
+      { time: "10:30 - 12:30", title: "Free Period (2 Hours)", location: "AI Study Recommender active below", type: "free" },
+      { time: "12:30 - 14:30", title: "CS22012 - ADSA Practical", location: "Lecture Theatre A (LT-A)", type: "practical" },
+      { time: "14:30 - 16:00", title: "Self-Study & Revision", location: "Library Silent Study Area", type: "free" }
+    ]
+  };
+
+  const [timetableData, setTimetableData] = useState(mockWeeklyTimetable);
+  const [studentDegree, setStudentDegree] = useState("Computer Science");
+  const [studentIntake, setStudentIntake] = useState("Intake 42");
+
+  useEffect(() => {
+    const saved = localStorage.getItem('smartCampusTimetable');
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        const allocs = parsed.allocations || [];
+        
+        // Enhance with course names from saved courses if available
+        const savedCourses = localStorage.getItem('smartCampusCourses');
+        let parsedCourses = [];
+        if (savedCourses) {
+          try { parsedCourses = JSON.parse(savedCourses); } catch(e){}
+        }
+
+        const newTimetable = { Monday: [], Tuesday: [], Wednesday: [], Thursday: [], Friday: [] };
+        
+        allocs.forEach(a => {
+          if (newTimetable[a.day]) {
+            const matchedCourse = parsedCourses.find(pc => pc.course_code === a.course_code);
+            
+            // Filter by selected degree (department) and intake
+            const courseDept = (matchedCourse && matchedCourse.department) ? matchedCourse.department : (a.department || "");
+            const courseIntake = (matchedCourse && matchedCourse.intake) ? matchedCourse.intake : (a.intake || "");
+            
+            let shortCode = "";
+            if (studentDegree === "Computer Science") shortCode = "CS";
+            else if (studentDegree === "Software Engineering") shortCode = "SE";
+            else if (studentDegree === "Computer Engineering") shortCode = "CE";
+            else if (studentDegree === "Information Technology") shortCode = "IT";
+            else if (studentDegree === "Information Systems") shortCode = "IS";
+            else if (studentDegree === "Data Science") shortCode = "DBA";
+
+            const matchesDegree = courseDept.includes(shortCode) || courseDept.includes(studentDegree);
+
+            // Only add if it matches the student's profile
+            if (matchesDegree && courseIntake === studentIntake) {
+              const cName = (matchedCourse && matchedCourse.course_name) ? matchedCourse.course_name : a.course_name;
+              const lName = (matchedCourse && matchedCourse.lecturer_name) ? matchedCourse.lecturer_name : a.lecturer_name;
+
+              newTimetable[a.day].push({
+                time: a.time_slot,
+                title: `${a.course_code} - ${cName || 'Course'}`,
+                location: `${a.assigned_room} ${lName && lName !== 'Unassigned Lecturer' ? '(' + lName + ')' : ''}`,
+                type: (a.room_name && a.room_name.toLowerCase().includes('lab')) ? 'practical' : 'lecture'
+              });
+            }
+          }
+        });
+        
+        Object.keys(newTimetable).forEach(day => {
+          newTimetable[day].sort((x, y) => x.time.localeCompare(y.time));
+          if (newTimetable[day].length === 0) {
+            newTimetable[day].push({ time: "08:30 - 16:30", title: "Free Day", location: "AI Study Recommender active below", type: "free" });
+          }
+        });
+        
+        setTimetableData(newTimetable);
+      } catch (e) {
+        console.error("Error parsing timetable for student", e);
+      }
+    }
+  }, [studentDegree, studentIntake]);
 
   const handleGetRecommendations = async () => {
     setRecLoading(true);
@@ -93,38 +192,76 @@ export default function StudentPortal() {
       {/* Student Greeting & Timetable */}
       {activeTab === "timetable" && (
       <div className="bg-white p-6 rounded-3xl space-y-4 border border-slate-200 shadow-sm">
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div>
             <h2 className="text-xl font-bold text-slate-900">Student Academic Hub & Timetable</h2>
-            <p className="text-xs text-slate-500">Kasun Bandara • D-COE-25-0023 • BSc (Hons) Computer Engineering (Intake 42 Sem IV)</p>
+            <div className="flex flex-wrap items-center gap-2 mt-1">
+              <span className="text-xs text-slate-500 font-semibold">Viewing as: Kasun Bandara • </span>
+              <select 
+                value={studentDegree} 
+                onChange={e => setStudentDegree(e.target.value)}
+                className="bg-slate-50 border border-slate-300 rounded-lg px-2 py-1 text-xs font-bold text-slate-700 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+              >
+                <option value="Computer Science">Computer Science</option>
+                <option value="Software Engineering">Software Engineering</option>
+                <option value="Computer Engineering">Computer Engineering</option>
+                <option value="Information Technology">Information Technology</option>
+                <option value="Information Systems">Information Systems</option>
+                <option value="Data Science">Data Science</option>
+              </select>
+              <select 
+                value={studentIntake} 
+                onChange={e => setStudentIntake(e.target.value)}
+                className="bg-slate-50 border border-slate-300 rounded-lg px-2 py-1 text-xs font-bold text-slate-700 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+              >
+                <option value="Intake 41">Intake 41</option>
+                <option value="Intake 42">Intake 42</option>
+              </select>
+            </div>
           </div>
-          <span className="px-3 py-1 text-xs font-semibold rounded-full bg-emerald-50 border border-emerald-200 text-emerald-700">
-            Friday Schedule Active
+          <span className="px-3 py-1 text-xs font-semibold rounded-full bg-emerald-50 border border-emerald-200 text-emerald-700 w-fit">
+            {selectedDay} Schedule Active
           </span>
         </div>
 
-        {/* Real KDU Intake 42 Student Timetable */}
+        {/* Day Selector Tabs */}
+        <div className="flex gap-2 pb-2 overflow-x-auto">
+          {["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"].map((day) => (
+            <button
+              key={day}
+              onClick={() => setSelectedDay(day)}
+              className={`px-4 py-1.5 rounded-lg text-xs font-bold transition whitespace-nowrap ${
+                selectedDay === day 
+                  ? "bg-emerald-100 text-emerald-800 border border-emerald-300" 
+                  : "bg-slate-50 text-slate-600 border border-slate-200 hover:bg-slate-100"
+              }`}
+            >
+              {day}
+            </button>
+          ))}
+        </div>
+
+        {/* Weekly Timetable Grid */}
         <div className="grid grid-cols-1 sm:grid-cols-4 gap-3 pt-2">
-          <div className="p-3.5 rounded-2xl bg-emerald-50 border border-emerald-200 space-y-1">
-            <span className="text-[10px] font-bold text-emerald-800 uppercase">Friday • 09:00 - 10:30</span>
-            <h4 className="text-xs font-bold text-slate-900">CS22023 - Artificial Intelligence</h4>
-            <p className="text-[11px] text-emerald-700 font-medium">Room FGS 3-1 (Mrs. WJ Samaraweera)</p>
-          </div>
-          <div className="p-3.5 rounded-2xl bg-slate-50 border border-slate-200 space-y-1">
-            <span className="text-[10px] font-bold text-slate-500 uppercase">Friday • 10:30 - 12:30</span>
-            <h4 className="text-xs font-bold text-slate-900">Free Period (2 Hours)</h4>
-            <p className="text-[11px] text-slate-500">AI Study Recommender active below</p>
-          </div>
-          <div className="p-3.5 rounded-2xl bg-slate-50 border border-slate-200 space-y-1">
-            <span className="text-[10px] font-bold text-slate-500 uppercase">Friday • 12:30 - 14:30</span>
-            <h4 className="text-xs font-bold text-slate-900">CS22012 - ADSA Practical</h4>
-            <p className="text-[11px] text-slate-500">Lecture Theatre A (LT-A)</p>
-          </div>
-          <div className="p-3.5 rounded-2xl bg-slate-50 border border-slate-200 space-y-1">
-            <span className="text-[10px] font-bold text-slate-500 uppercase">Friday • 14:30 - 16:00</span>
-            <h4 className="text-xs font-bold text-slate-900">Self-Study & Revision</h4>
-            <p className="text-[11px] text-slate-500">Library Silent Study Area</p>
-          </div>
+          {timetableData[selectedDay].map((slot, idx) => (
+            <div key={idx} className={`p-3.5 rounded-2xl border space-y-1 ${
+              slot.type === 'lecture' ? 'bg-emerald-50 border-emerald-200' :
+              slot.type === 'practical' ? 'bg-blue-50 border-blue-200' :
+              'bg-slate-50 border-slate-200'
+            }`}>
+              <span className={`text-[10px] font-bold uppercase ${
+                slot.type === 'lecture' ? 'text-emerald-800' :
+                slot.type === 'practical' ? 'text-blue-800' :
+                'text-slate-500'
+              }`}>{selectedDay} • {slot.time}</span>
+              <h4 className="text-xs font-bold text-slate-900">{slot.title}</h4>
+              <p className={`text-[11px] font-medium ${
+                slot.type === 'lecture' ? 'text-emerald-700' :
+                slot.type === 'practical' ? 'text-blue-700' :
+                'text-slate-500'
+              }`}>{slot.location}</p>
+            </div>
+          ))}
         </div>
       </div>
       )}

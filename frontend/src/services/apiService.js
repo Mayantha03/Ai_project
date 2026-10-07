@@ -50,37 +50,73 @@ export const apiService = {
       return response.data;
     } catch (err) {
       console.warn("AI Optimizer offline. Using internal Genetic Simulation.", err);
-      return {
-        total_courses: payload.courses.length,
-        total_clashes: 0,
-        best_fitness_score: 842.5,
-        fitness_convergence: [410, 520, 680, 750, 795, 820, 835, 840, 842.5],
-        allocations: payload.courses.map((c, idx) => {
+        const allDays = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
+        const timeSlots = ['08:30-10:30', '10:30-12:30', '13:00-15:00', '15:00-17:00'];
+        const occupied = {}; // Track occupied slots: occupied[intake][dept][day][time] = true
+
+        const allocations = payload.courses.map((c, idx) => {
           const room = payload.classrooms[idx % payload.classrooms.length];
           const pred = c.predicted_attendance || Math.round(c.enrolled_students * 0.8);
           const util = parseFloat(((pred / room.capacity) * 100).toFixed(1));
           
-          const allDays = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
-          const timeSlots = ['08:30-10:30', '10:30-12:30', '13:00-15:00', '15:00-17:00'];
+          const intake = c.intake || 'General';
+          const depts = (c.department || 'General').split(',').map(d => d.trim());
           
-          let assignedDay = allDays[idx % allDays.length];
-          let assignedTimeSlot = timeSlots[idx % timeSlots.length];
+          let assignedDay = 'Monday';
+          let assignedTimeSlot = '08:30-10:30';
           let visitingReason = '';
-          
+          let foundSlot = false;
+
+          // If visiting, try to respect constraints first
           if (c.is_visiting) {
-            let matchesConstraint = false;
-            if (c.visiting_availability && c.visiting_availability.length > 0) {
-              assignedDay = c.visiting_availability[idx % c.visiting_availability.length];
-              matchesConstraint = true;
-            }
-            if (c.visiting_time_slots && c.visiting_time_slots.length > 0) {
-              assignedTimeSlot = c.visiting_time_slots[idx % c.visiting_time_slots.length];
-              matchesConstraint = true;
-            }
-            if (matchesConstraint) {
-               visitingReason = `Scheduled on ${assignedDay} at ${assignedTimeSlot} to match Visiting Lecturer availability.`;
-            }
+             const vDays = (c.visiting_availability?.length > 0) ? c.visiting_availability : allDays;
+             const vTimes = (c.visiting_time_slots?.length > 0) ? c.visiting_time_slots : timeSlots;
+             
+             for (let d of vDays) {
+               for (let t of vTimes) {
+                  // Check if any of the target departments are busy
+                  let busy = false;
+                  for (let dept of depts) {
+                    if (occupied[intake]?.[dept]?.[d]?.[t]) busy = true;
+                  }
+                  if (!busy) {
+                    assignedDay = d;
+                    assignedTimeSlot = t;
+                    foundSlot = true;
+                    visitingReason = `Scheduled on ${d} at ${t} to match Visiting Lecturer availability.`;
+                    break;
+                  }
+               }
+               if (foundSlot) break;
+             }
           }
+
+          // If not visiting or constraints couldn't be met, scan all slots
+          if (!foundSlot) {
+             for (let t of timeSlots) {
+               for (let d of allDays) {
+                  let busy = false;
+                  for (let dept of depts) {
+                    if (occupied[intake]?.[dept]?.[d]?.[t]) busy = true;
+                  }
+                  if (!busy) {
+                    assignedDay = d;
+                    assignedTimeSlot = t;
+                    foundSlot = true;
+                    break;
+                  }
+               }
+               if (foundSlot) break;
+             }
+          }
+
+          // Mark slot as occupied for all associated departments
+          if (!occupied[intake]) occupied[intake] = {};
+          depts.forEach(dept => {
+             if (!occupied[intake][dept]) occupied[intake][dept] = {};
+             if (!occupied[intake][dept][assignedDay]) occupied[intake][dept][assignedDay] = {};
+             occupied[intake][dept][assignedDay][assignedTimeSlot] = true;
+          });
 
           const reasons = [
             `Tight capacity fit: ${room.capacity} seats for ${pred} students (${util}% utilization).`,
@@ -107,8 +143,15 @@ export const apiService = {
             has_clash: false,
             ai_reasons: reasons
           };
-        })
-      };
+        });
+
+        return {
+          total_courses: payload.courses.length,
+          total_clashes: 0,
+          best_fitness_score: 842.5,
+          fitness_convergence: [410, 520, 680, 750, 795, 820, 835, 840, 842.5],
+          allocations: allocations
+        };
     }
   },
 
