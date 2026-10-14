@@ -46,13 +46,16 @@ export default function AdminDashboard() {
     if (saved) {
       try {
         const parsed = JSON.parse(saved);
-        return parsed.map(c => ({
-          ...c,
-          lecturer_name: c.lecturer_name || 'TBA'
-        }));
+        // If cached data is outdated (fewer courses than real data), auto-refresh
+        if (parsed.length >= realCoursesData.length) {
+          return parsed.map(c => ({
+            ...c,
+            lecturer_name: c.lecturer_name || 'TBA'
+          }));
+        }
       } catch(e) {}
     }
-    // Use real Excel data as default
+    // Use real Excel data as default (auto-saves via useEffect below)
     return realCoursesData;
   });
 
