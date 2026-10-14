@@ -1,14 +1,17 @@
 import React, { useState, useEffect } from 'react';
 import { apiService } from '../services/apiService';
+import { realCoursesData } from '../data/realCoursesData';
 import MetricCard from '../components/MetricCard';
 import ExplainabilityCard from '../components/ExplainabilityCard';
 import CampusMap from '../components/CampusMap';
 import { useNotifications } from '../context/NotificationContext';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
 import { 
   Building2, Users, CheckCircle, AlertTriangle, 
   Sparkles, Play, Layers, ArrowRight, ShieldCheck, Flame,
   Pencil, Plus, Trash2, X, Save, Edit3, Table, LayoutGrid,
-  Lock, Scale, MessageSquare, Calendar, Settings2
+  Lock, Scale, MessageSquare, Calendar, Settings2, FileDown
 } from 'lucide-react';
 
 export default function AdminDashboard() {
@@ -45,20 +48,12 @@ export default function AdminDashboard() {
         const parsed = JSON.parse(saved);
         return parsed.map(c => ({
           ...c,
-          lecturer_name: c.lecturer_name || "Mrs. WJ Samaraweera"
+          lecturer_name: c.lecturer_name || 'TBA'
         }));
       } catch(e) {}
     }
-    return [
-      { course_code: "IT3103", course_name: "Service Oriented Web Programming (SOWP)", faculty: "Computing", department: "IT", intake: "Intake 41", enrolled_students: 89, credits: 3, requires_lab: false, lecturer_name: "Mr. KKCS Karunatilake" },
-      { course_code: "IT3153", course_name: "Software Quality Assurance (SQA)", faculty: "Computing", department: "IT", intake: "Intake 41", enrolled_students: 124, credits: 3, requires_lab: false, lecturer_name: "Ms. MVT Kawya" },
-      { course_code: "IT3113", course_name: "Cyber Security (CS)", faculty: "Computing", department: "IT", intake: "Intake 41", enrolled_students: 89, credits: 3, requires_lab: false, lecturer_name: "Mr. JADG Sampath" },
-      { course_code: "IS3073", course_name: "Management Information Systems (MIS)", faculty: "Computing", department: "IS", intake: "Intake 41", enrolled_students: 35, credits: 3, requires_lab: false, lecturer_name: "Mr. WMSRB Wijayarathna" },
-      { course_code: "IT3143", course_name: "Independent Study", faculty: "Computing", department: "IT", intake: "Intake 41", enrolled_students: 124, credits: 3, requires_lab: false, lecturer_name: "Dr. N Wedasinghe", is_visiting: true, visiting_availability: ['Friday'], visiting_time_slots: ['08:30-10:30'] },
-      { course_code: "CS22023", course_name: "Artificial Intelligence", faculty: "Computing", department: "Computer Science", intake: "Intake 42", enrolled_students: 82, credits: 2, requires_lab: false, lecturer_name: "Mrs. WJ Samaraweera" },
-      { course_code: "CS22012", course_name: "Advanced Data Structures & Algorithms", faculty: "Computing", department: "Computer Science", intake: "Intake 42", enrolled_students: 82, credits: 2, requires_lab: false, lecturer_name: "Mrs. SCM De S Sirisuriya" },
-      { course_code: "SE22013", course_name: "Software Project Management", faculty: "Computing", department: "Software Engineering", intake: "Intake 42", enrolled_students: 58, credits: 3, requires_lab: false, lecturer_name: "Dr. WGCW Kumara" },
-    ];
+    // Use real Excel data as default
+    return realCoursesData;
   });
 
   useEffect(() => {
@@ -209,6 +204,99 @@ export default function AdminDashboard() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleExportPDF = () => {
+    if (!gaResult) return;
+    const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
+    const pageWidth = doc.internal.pageSize.getWidth();
+    const now = new Date();
+
+    // Header
+    doc.setFillColor(16, 185, 129);
+    doc.rect(0, 0, pageWidth, 22, 'F');
+    doc.setTextColor(255, 255, 255);
+    doc.setFontSize(15);
+    doc.setFont('helvetica', 'bold');
+    doc.text('Faculty of Computing — Master Timetable Report', pageWidth / 2, 10, { align: 'center' });
+    doc.setFontSize(8);
+    doc.setFont('helvetica', 'normal');
+    doc.text(`KDU Ratmalana  |  Generated: ${now.toLocaleString()}`, pageWidth / 2, 17, { align: 'center' });
+
+    // Summary row
+    doc.setTextColor(30, 30, 30);
+    doc.setFontSize(9);
+    doc.setFont('helvetica', 'bold');
+    doc.text(`Total Courses: ${gaResult.total_courses}   |   Clashes: ${gaResult.total_clashes}   |   Best Fitness Score: ${gaResult.best_fitness_score}`, 14, 30);
+
+    // Group allocations by department
+    const grouped = gaResult.allocations.reduce((acc, curr) => {
+      const dept = curr.department || 'General';
+      if (!acc[dept]) acc[dept] = [];
+      acc[dept].push(curr);
+      return acc;
+    }, {});
+
+    let yOffset = 36;
+
+    Object.entries(grouped).forEach(([dept, courses]) => {
+      // Department title
+      doc.setFontSize(10);
+      doc.setFont('helvetica', 'bold');
+      doc.setTextColor(79, 70, 229);
+      doc.text(dept.toUpperCase(), 14, yOffset);
+      yOffset += 2;
+
+      autoTable(doc, {
+        startY: yOffset,
+        head: [['#', 'Course Code', 'Module Name', 'Intake', 'Lecturer', 'Day', 'Time Slot', 'Room', 'Students', 'Utilization']], 
+        body: courses.map((c, i) => [
+          i + 1,
+          c.course_code,
+          c.course_name || '-',
+          c.intake || '-',
+          c.lecturer_name || '-',
+          c.day,
+          c.time_slot,
+          c.assigned_room,
+          c.enrolled_students,
+          `${c.utilization_percentage}%`
+        ]),
+        styles: { fontSize: 7, cellPadding: 2 },
+        headStyles: { fillColor: [16, 185, 129], textColor: 255, fontStyle: 'bold', fontSize: 7 },
+        alternateRowStyles: { fillColor: [240, 253, 244] },
+        columnStyles: {
+          0: { cellWidth: 8 },
+          1: { cellWidth: 22 },
+          2: { cellWidth: 50 },
+          3: { cellWidth: 20 },
+          4: { cellWidth: 40 },
+          5: { cellWidth: 20 },
+          6: { cellWidth: 22 },
+          7: { cellWidth: 22 },
+          8: { cellWidth: 18 },
+          9: { cellWidth: 18 },
+        },
+        margin: { left: 14, right: 14 },
+        didDrawPage: (data) => {
+          // Footer on each page
+          doc.setFontSize(7);
+          doc.setTextColor(150);
+          doc.setFont('helvetica', 'normal');
+          doc.text('ClassOptima — AI-Powered Smart Campus | KDU Faculty of Computing', pageWidth / 2, doc.internal.pageSize.getHeight() - 6, { align: 'center' });
+          doc.text(`Page ${data.pageNumber}`, pageWidth - 14, doc.internal.pageSize.getHeight() - 6, { align: 'right' });
+        }
+      });
+
+      yOffset = doc.lastAutoTable.finalY + 10;
+      if (yOffset > doc.internal.pageSize.getHeight() - 30) {
+        doc.addPage();
+        yOffset = 20;
+      }
+    });
+
+    doc.save(`KDU_Master_Timetable_${now.toLocaleDateString().replace(/\//g, '-')}.pdf`);
+    addNotification('PDF Report Exported', 'Master Timetable PDF has been downloaded successfully.', 'INFO');
   };
 
   const handleRunGlobalGeneticOptimization = async () => {
@@ -754,7 +842,15 @@ export default function AdminDashboard() {
           </div>
         </div>
         
-        <div className="flex justify-end pt-2">
+        <div className="flex items-center justify-end gap-3 pt-2">
+          {gaResult && (
+            <button
+              onClick={handleExportPDF}
+              className="px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs flex items-center gap-2 transition shadow-md shadow-emerald-500/20"
+            >
+              <FileDown className="w-3.5 h-3.5" /> Export PDF Report
+            </button>
+          )}
           <button
             onClick={handleRunGlobalGeneticOptimization}
             disabled={gaLoading}

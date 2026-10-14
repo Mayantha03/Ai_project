@@ -216,6 +216,7 @@ export default function StudentPortal() {
               >
                 <option value="Intake 41">Intake 41</option>
                 <option value="Intake 42">Intake 42</option>
+                <option value="Intake 43">Intake 43</option>
               </select>
             </div>
           </div>
