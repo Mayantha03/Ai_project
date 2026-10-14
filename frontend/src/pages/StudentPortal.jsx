@@ -34,31 +34,36 @@ export default function StudentPortal() {
 
   const mockWeeklyTimetable = {
     Monday: [
-      { time: "09:00 - 11:00", title: "CS22032 - Database Systems", location: "FOM 4-1 (Dr. Nuwan)", type: "lecture" },
-      { time: "11:00 - 13:00", title: "CS22042 - System Analysis", location: "FOM 4-2 (Mr. Silva)", type: "lecture" },
-      { time: "13:00 - 14:30", title: "Free Period", location: "AI Study Recommender active below", type: "free" },
-      { time: "14:30 - 16:30", title: "CS22023 - Artificial Intelligence", location: "FGS 3-1 (Mrs. WJ Samaraweera)", type: "lecture" }
+      { time: "09:00-11:00", title: "CS22032 - Database Systems", location: "FOM 4-1 (Dr. Nuwan)", type: "lecture" },
+      { time: "11:00-13:00", title: "CS22042 - System Analysis", location: "FOM 4-2 (Mr. Silva)", type: "lecture" },
+      { time: "12:00-12:30", title: "☕ Tea Break", location: "Campus Canteen / Common Area", type: "break" },
+      { time: "13:00-14:30", title: "Free Period", location: "AI Study Recommender active below", type: "free" },
+      { time: "14:30-16:30", title: "CS22023 - Artificial Intelligence", location: "FGS 3-1 (Mrs. WJ Samaraweera)", type: "lecture" }
     ],
     Tuesday: [
-      { time: "08:30 - 10:30", title: "Free Period", location: "AI Study Recommender active below", type: "free" },
-      { time: "10:30 - 12:30", title: "CS22053 - Computer Networks", location: "LT-B (Dr. Perera)", type: "lecture" },
-      { time: "13:30 - 15:30", title: "CS22032 - DB Practical", location: "Computing Lab 2", type: "practical" }
+      { time: "08:30-10:30", title: "Free Period", location: "AI Study Recommender active below", type: "free" },
+      { time: "10:30-12:30", title: "CS22053 - Computer Networks", location: "LT-B (Dr. Perera)", type: "lecture" },
+      { time: "12:00-12:30", title: "☕ Tea Break", location: "Campus Canteen / Common Area", type: "break" },
+      { time: "13:30-15:30", title: "CS22032 - DB Practical", location: "Computing Lab 2", type: "practical" }
     ],
     Wednesday: [
-      { time: "08:30 - 11:30", title: "CS22023 - AI Practical", location: "Computing Lab 1", type: "practical" },
-      { time: "12:30 - 14:30", title: "CS22053 - Networks Practical", location: "Network Lab", type: "practical" },
-      { time: "14:30 - 16:30", title: "Free Period", location: "AI Study Recommender active below", type: "free" }
+      { time: "08:30-11:30", title: "CS22023 - AI Practical", location: "Computing Lab 1", type: "practical" },
+      { time: "12:00-12:30", title: "☕ Tea Break", location: "Campus Canteen / Common Area", type: "break" },
+      { time: "12:30-14:30", title: "CS22053 - Networks Practical", location: "Network Lab", type: "practical" },
+      { time: "14:30-16:30", title: "Free Period", location: "AI Study Recommender active below", type: "free" }
     ],
     Thursday: [
-      { time: "09:00 - 11:00", title: "CS22063 - Software Engineering", location: "LT-C (Prof. Karunaratne)", type: "lecture" },
-      { time: "11:00 - 13:00", title: "Free Period", location: "AI Study Recommender active below", type: "free" },
-      { time: "14:00 - 16:00", title: "CS22063 - SE Practical", location: "Computing Lab 3", type: "practical" }
+      { time: "09:00-11:00", title: "CS22063 - Software Engineering", location: "LT-C (Prof. Karunaratne)", type: "lecture" },
+      { time: "11:00-13:00", title: "Free Period", location: "AI Study Recommender active below", type: "free" },
+      { time: "12:00-12:30", title: "☕ Tea Break", location: "Campus Canteen / Common Area", type: "break" },
+      { time: "14:00-16:00", title: "CS22063 - SE Practical", location: "Computing Lab 3", type: "practical" }
     ],
     Friday: [
-      { time: "09:00 - 10:30", title: "CS22023 - Artificial Intelligence", location: "FGS 3-1 (Mrs. WJ Samaraweera)", type: "lecture" },
-      { time: "10:30 - 12:30", title: "Free Period (2 Hours)", location: "AI Study Recommender active below", type: "free" },
-      { time: "12:30 - 14:30", title: "CS22012 - ADSA Practical", location: "Lecture Theatre A (LT-A)", type: "practical" },
-      { time: "14:30 - 16:00", title: "Self-Study & Revision", location: "Library Silent Study Area", type: "free" }
+      { time: "09:00-10:30", title: "CS22023 - Artificial Intelligence", location: "FGS 3-1 (Mrs. WJ Samaraweera)", type: "lecture" },
+      { time: "10:30-12:00", title: "Free Period", location: "AI Study Recommender active below", type: "free" },
+      { time: "12:00-12:30", title: "☕ Tea Break", location: "Campus Canteen / Common Area", type: "break" },
+      { time: "12:30-14:30", title: "CS22012 - ADSA Practical", location: "Lecture Theatre A (LT-A)", type: "practical" },
+      { time: "14:30-16:00", title: "Self-Study & Revision", location: "Library Silent Study Area", type: "free" }
     ]
   };
 
@@ -117,8 +122,15 @@ export default function StudentPortal() {
         
         Object.keys(newTimetable).forEach(day => {
           newTimetable[day].sort((x, y) => x.time.localeCompare(y.time));
-          if (newTimetable[day].length === 0) {
-            newTimetable[day].push({ time: "08:30 - 16:30", title: "Free Day", location: "AI Study Recommender active below", type: "free" });
+          // Inject fixed Tea Break at 12:00-12:30 for every day
+          newTimetable[day].push({ time: "12:00-12:30", title: "☕ Tea Break", location: "Campus Canteen / Common Area", type: "break" });
+          newTimetable[day].sort((x, y) => x.time.localeCompare(y.time));
+          if (newTimetable[day].filter(s => s.type !== 'break').length === 0) {
+            newTimetable[day] = [
+              { time: "08:30-12:00", title: "Free Morning", location: "AI Study Recommender active below", type: "free" },
+              { time: "12:00-12:30", title: "☕ Tea Break", location: "Campus Canteen / Common Area", type: "break" },
+              { time: "12:30-16:30", title: "Free Afternoon", location: "AI Study Recommender active below", type: "free" },
+            ];
           }
         });
         
@@ -248,11 +260,13 @@ export default function StudentPortal() {
             <div key={idx} className={`p-3.5 rounded-2xl border space-y-1 ${
               slot.type === 'lecture' ? 'bg-emerald-50 border-emerald-200' :
               slot.type === 'practical' ? 'bg-blue-50 border-blue-200' :
+              slot.type === 'break' ? 'bg-amber-50 border-amber-300' :
               'bg-slate-50 border-slate-200'
             }`}>
               <span className={`text-[10px] font-bold uppercase ${
                 slot.type === 'lecture' ? 'text-emerald-800' :
                 slot.type === 'practical' ? 'text-blue-800' :
+                slot.type === 'break' ? 'text-amber-700' :
                 'text-slate-500'
               }`}>{selectedDay} • {slot.time}</span>
               <h4 className="text-xs font-bold text-slate-900">{slot.title}</h4>
