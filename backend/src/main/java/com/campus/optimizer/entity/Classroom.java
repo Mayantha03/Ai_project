@@ -30,15 +30,19 @@ public class Classroom {
     @Column(name = "room_type", nullable = false)
     private RoomType roomType;
 
+    @Builder.Default
     @Column(name = "has_ac")
     private Boolean hasAc = true;
 
+    @Builder.Default
     @Column(name = "has_projector")
     private Boolean hasProjector = true;
 
+    @Builder.Default
     @Column(name = "is_lab")
     private Boolean isLab = false;
 
+    @Builder.Default
     @Column(name = "is_active")
     private Boolean isActive = true;
 }

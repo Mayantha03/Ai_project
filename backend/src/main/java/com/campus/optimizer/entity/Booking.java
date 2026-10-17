@@ -43,9 +43,11 @@ public class Booking {
     @Column(name = "attendee_count", nullable = false)
     private Integer attendeeCount;
 
+    @Builder.Default
     @Column(nullable = false)
     private String status = "APPROVED";
 
+    @Builder.Default
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt = LocalDateTime.now();
 }

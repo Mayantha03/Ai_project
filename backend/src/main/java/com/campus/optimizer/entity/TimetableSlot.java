@@ -35,6 +35,7 @@ public class TimetableSlot {
     @Column(name = "end_time", nullable = false)
     private LocalTime endTime;
 
+    @Builder.Default
     @Column(name = "is_cancelled")
     private Boolean isCancelled = false;
 
